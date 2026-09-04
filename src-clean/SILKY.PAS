@@ -192,14 +192,23 @@ end;
   black. It works on the buffer; DeltaPal is what reaches the hardware.
   Does nothing at all unless Fading has been set.
 
-  THE GUARD IS WRITTEN WITH TWO GOTOS AND IT HAS TO BE. Written as a plain
-  `if Fading = 1 then begin ... end` the compiler owns both sides of the
-  branch, inverts the test and falls through into the body, which is two
-  bytes shorter than what the original has. A positive test that jumps INTO
-  the body, with an unconditional jump past it, is the only shape that emits
-  the original's seven bytes -- and it is what the authors, who wrote most of
-  this demo in inline assembler, would think in. Tidying it into an `if`
-  moves every byte after it. }
+  THE GUARD IS WRITTEN WITH A GOTO AND THE ENCODING SAYS IT HAS TO BE.
+  The original is `cmp / jne +2 / jmp +3 / jmp near`. The conditional jumps
+  over exactly two bytes, and those two bytes are a short jump -- so the
+  THEN-PART of the if compiled to a two-byte short jump, and in Turbo Pascal
+  only `goto` does that. The near jump after it is the next statement,
+  leaving for the end of the routine.
+
+  Written as a plain `if Fading = 1 then begin ... end` the compiler owns
+  both sides of the branch, inverts the test and falls through into the body:
+  five bytes, not seven. It does that at every body length -- probes/SWEEP.PAS
+  sweeps across the short-jump boundary and never once emits the long form --
+  and a label at the head of the body does not change it either.
+
+  [reading] Two spellings compile to these bytes and nothing distinguishes
+  them: `goto Done` after the guard with the label at the end, or `Exit`. The
+  first is written here. Which one the authors wrote is not recoverable, and
+  the routine is byte-identical either way. }
 procedure ClampDown;
 label
   Body, Done;

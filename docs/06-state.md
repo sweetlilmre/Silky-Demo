@@ -39,7 +39,13 @@ Body:
 Done:
 ```
 
-That emits the seven bytes exactly, near displacement included, and with it the file goes byte-identical. It is also the shape a person who thinks in assembler writes, which is what the authors were.
+That emits the seven bytes exactly, near displacement included, and with it the file goes byte-identical.
+
+**The encoding forces it, and that is a better argument than the shape hunt.** `jne +2` jumps over exactly two bytes; those two bytes are `eb 03`, a short jump; so the then-part of the `if` compiled to a two-byte short jump, and in Turbo Pascal the only statement that does is a `goto` to a label a few bytes ahead. The `e9 9a 00` behind it is the next statement, leaving for the end of the routine. Everything else — a compound statement, `Exit`, a `case`, an assignment — is longer or does not begin with `EB`.
+
+Three measurements back it up. `probes/SWEEP.PAS` runs a plain `if` across the short-jump boundary, twenty-four body lengths: below it a short `jne`, above it the folded `je +3 / jmp near`, and never the long form. `probes/LBL.PAS` shows a label at the head of the body does not stop the folding either. And the long form occurs **once** in the whole 10,704-byte image, against nine folded ones — including one six lines further down the same routine, on the `for` loop's own back edge. Whatever it is, it is local to that statement.
+
+Two spellings produce identical bytes — `goto Done` with the label at the routine's end, or `Exit` — and nothing distinguishes them. That much is tagged `[reading]` in the source.
 
 **What the error was worth correcting.** A negative result across sixteen constructs and three compilers is strong evidence, and it was read as evidence for the wrong thing: "no source construct does this" was taken to mean the compiler differed, when it meant the constructs were all the same *kind* of construct. Sixteen ways of writing an `if` are one experiment, not sixteen. The distinguishing feature — the polarity — was in the bytes the whole time and named in this document, and it was treated as a curiosity rather than as the thing to reproduce.
 
