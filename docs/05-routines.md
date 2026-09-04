@@ -44,9 +44,11 @@ lcall 112f:0000
 
 The source is a **far pointer held at DGROUP `0x628`**, loaded with `les di, ptr [0x628]` and indexed `[bp-2] * 256 + [bp-1] * 16`. A pointer rather than an array is why nothing in the segment references the image data by absolute address.
 
-**`- 0x2011` is a folded array subscript.** The wiki's `subscript-fold-names-the-bounds` says a constant folded into the displacement encodes the array's lower bounds, so this constant should name them. It does not decompose cleanly against the two strides seen here (`0x2011` is `32 * 256 + 17`, and 17 is not a multiple of the 16-byte stride), so a third term is in play and the bounds are **not yet read**.
+**`- 0x2011` is a folded array subscript, and it does name the bounds.** `0x2011` is `32*256 + 1*16 + 1`, so the array is `array[32..90, 1..16, 1..16] of Byte` — character, row, column. The third term was the column, whose lower bound is 1. It is the font: `SizeOf` is 15104, which is `59 * 16 * 16` and also the size of `bin/GOLD.FNT` on disk, and 32 to 90 is 59 characters, space through `Z`. The wiki's `subscript-fold-names-the-bounds` paid out exactly as advertised.
 
-Six identical sites plotting from one source with one colour offset is consistent with a symmetric figure drawn in six copies, which would match `README.1ST`'s account of the Asphyxia symbol coming out of "how to generate paths for a bouncing ball routine". That is a reading, not a measurement — what is measured is six identical call sites and a shared source pointer.
+**A withdrawn reading.** This document first suggested the six identical sites were a symmetric figure drawn in six copies, matching `README.1ST`'s account of the Asphyxia symbol coming out of a bouncing-ball path routine. It was flagged as a reading rather than a measurement, and it was wrong.
+
+`0cb1` is `ShowFont`. It renders **every glyph** into video memory — characters 32 to 79 at `y = Row*3` and then 80 to 90 at `y = Row*3+50`, each source row drawn three screen rows tall — and then frees the font. The six sites are those two groups of three. The scroller afterwards copies glyphs out of video memory, which is why the font can be released at all. The full reading is in [06-state.md](06-state.md) and the routine is transcribed byte-for-byte.
 
 ## `0f6d` — the VRAM block copy, 175 bytes
 

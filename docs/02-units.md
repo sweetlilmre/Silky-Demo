@@ -60,7 +60,9 @@ Four byte parameters. Colour index at `[bp+0xc]` goes out to port `3c8`, the VGA
 
 So: 67 records, `0x101` = 257 bytes each, based at DGROUP `0x717`, running to `0x4a5a`.
 
-**What that table is remains unread.** The record is 257 bytes with a word at offset 0 and a flag byte at 252; the loop starts at 1 rather than 0, so either record 0 is deliberately skipped or the base is really `0x717 + 0x101`. Nothing here says which, and the fields the loop does *not* touch are untouched by this unit at all — something else fills them.
+**What that table is remains unread**, and the reconstruction now bounds it. The record is 257 bytes with a word at offset 0 and a flag byte at 252; the loop starts at 1 rather than 0, so either record 0 is skipped deliberately or the base is really `0x717 + 0x101`. Nothing here says which, and the fields the loop does *not* touch are untouched by this unit at all.
+
+The linker settles the unit's total: Crt's lowest DGROUP operand is `0x5182` and `Tbl` starts at `0x818`, so this unit owns **18,794 bytes**. The init loop evidences 67 records of 257, which is 17,219, and the remaining **1,573 are declared by length alone** — inflating `Tbl` to `array[1..73]` fits the same arithmetic and contradicts the loop's bound of 67, so a separate array of unknown purpose is the honest declaration.
 
 ## A correction
 

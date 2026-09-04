@@ -44,19 +44,21 @@ Turbo Pascal emits a string literal immediately before the routine that uses it.
 | `0b25` | `Check2.Cel` | `0b30` | `04a9` ×4, `093b` ×2, `0822`, `0850` |
 | `0be9` | `Asphyx.Cel` | `0bf4` | `04a9` ×4, `093b` ×2, `0822`, `0850` |
 
-The shared `04a9` / `0822` / `0850` / `093b` group is the file-I/O family — assign, open, read, close — though which System offset is which is not yet settled.
+The shared group is the file-I/O family, and each is now named: **`0822` Assign, `0850` Reset, `093b` BlockRead, `08d1` Close**, with **`04a9`** the I/O-result check `{$I+}` emits after each. Read out of `Drawit` at `1000:0052`, whose literal and record size make the pairing unambiguous.
 
 ## The entry sequence is not a routine
 
 ```
-1000:1194  call 0xe / call 0x101c / call 0x10be / ret      <- the exit routine
+1000:1194  call 0xe / call 0x101c / call 0x10be / ret      <- the last scene
 1000:119e  lcall 11a6:0000     System init                 <- the MZ entry point
 1000:11a3  lcall 1144:0000     Crt init
 1000:11a8  lcall 113c:0067     the palette unit's init
 1000:11ad  push bp ...                                     <- the main block
 ```
 
-`CS:IP` in the MZ header points at `119e`, which is 15 bytes of unit-init chain that falls straight into `11ad`. The 10 bytes at `1194` immediately before it are a separate routine — the **exit** path, called once from `12e0`: restore the start address, call `101c`, then `TextMode(3)`.
+`CS:IP` in the MZ header points at `119e`, which is 15 bytes of unit-init chain that falls straight into `11ad`. The 10 bytes at `1194` immediately before it are a separate routine, called once from `12e0`.
+
+**It is not an exit routine, though it was read as one at first.** `101c` in the middle of it is `RunScroll`, the scrolltext — the demo's last and longest phase. So `1194` is *the final scene plus its cleanup*: point the CRTC at the scroll area, run it until the fade ends it, then hand the screen back to DOS.
 
 ## What main does, in order
 
@@ -78,13 +80,13 @@ The shared `04a9` / `0822` / `0850` / `093b` group is the file-I/O family — as
 11f1  call 0052          load scroll.col
 11f4  call 0bf4          load Asphyx.Cel
       ... two copy loops into [di+0x633] ...
-12e0  call 1194          exit
+12e0  call 1194          the scrolltext, then text mode
 ```
 
 `[0x816]` is written here and read by both Mode X routines — the only writer in the image, and it is the program rather than the unit that sets it.
 
-## Still open
+## All of it is transcribed
 
-The two 424-byte routines at `02a1` and `0449` have the same shape — `System:0776` ×16 and `System:09d3` ×8 apiece — and are almost certainly a pair. Neither is identified.
+Every routine named above is now written and measured. `blockcmp` reports 4848 of 4848 bytes of this segment, 28 of 29 blocks agreeing, and the only dissenter is `ClampDown`'s two-byte guard — see [06-state.md](06-state.md).
 
-Nothing in this segment references DGROUP `0x717..0x4a5a` by absolute address, so the 67-record table the palette unit initialises is still unaccounted for; if it is filled at all, it is through a computed pointer.
+The twins at `02a1` and `0449` are `RotPal0` and `RotPal1`, a forward and a backward palette rotator; the reading is in [04-palette-animation.md](04-palette-animation.md).
