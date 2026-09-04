@@ -95,14 +95,22 @@ resolution = "Done. Every hand-written assembler line in MODEX.PAS and SILKY.PAS
 [[plan.investigation]]
 name = "routines-locator-and-relocated-prologue"
 finding = "routines.py locates a marked routine by searching the built image for the ORIGINALS opening bytes, and a relocated address inside those bytes defeats it. Measured here: PutPixel at 112f:0000 and SetPlane at 112f:00a0 were reported NOT FOUND in any built image while both were demonstrably present, at 0x923 and 0x9db. Both open with push bp, mov bp sp, xor ax ax, then a FAR CALL to the stack check whose four address bytes are relocated. SetModeX, whose prologue holds no fixup at all, was found and measured 93 bytes. WaitRetrace and GotoScnPos are assembler with no stack check and were found. This matters beyond these two: with $S+, which this target measurably uses, nearly every framed Turbo Pascal routine opens with that same far call, so most program routines will hit it as markers are added. --probe exists for the case and its candidates here were past the segment end, so it did not help. Markers were removed from MODEX.PAS because a unit is measured by units.py against its own TPU, which already reports it identical over all 202 bytes; the note in the file says so. Not yet raised as a kit change: verify the diagnosis on a second routine first."
-state = "open"
+state = "resolved"
+resolution = "WITHDRAWN. Not a tool defect. Run against the two mature consumers, routines.py locates everything -- 20 of 20 in one and 91 of 91 in the other, the latter including 61 framed Pascal routines whose prologue holds the same stack-check far call. In a reconstruction whose link layout has converged the segments sit at the originals addresses, so that call is IDENTICAL rather than merely relocated, and the byte search succeeds. NOT FOUND here means our layout has not converged yet, which is information rather than a blind spot, and --probe already exists for the case. The proposed fix -- masking relocated words when matching a prologue -- would have weakened the locator for every consumer to serve an early-stage symptom. This is why the change was held for confirmation."
 
 [[plan.investigation]]
 name = "routines-emit-needs-a-path"
 finding = "routines.py --emit with no path raises IndexError: list index out of range from argv.index(\"--emit\") + 1 at line 286, instead of printing usage. Small, but it is a crash where every other argument error in this kit prints a sentence. Trivial fix in the kit; recorded rather than patched because a kit change needs accepting by every consumer."
-state = "open"
+state = "resolved"
+resolution = "Fixed in kit d5ab9c2. --emit with no path now prints what it needs and exits 2, and rejects a following flag too."
 
 [[plan.investigation]]
 name = "palette-unit-at-25-percent"
 finding = "PALETTE at 113c rebuilds to 25 percent, agreeing to +0x20 of 0x7c. One finding already banked: the unit is compiled with $G- where MODEX and the program use $G+. Measured -- at 113c:0018 the original computes the record offset with mov ax,$0101 then mul, which is 8086, and with $G+ Turbo Pascal emits imul di,[bp-2],$0101 instead, a 186 instruction. Adding $G- to the unit moved the agreement from 0x18 to 0x20. The next divergence is the address arithmetic: the original does mov di,ax then add di,$0717 and stores DI and DS directly, while ours does lea ax,[di+0] then goes through DX. Part of that is DGROUP placement -- our Tbl sits at offset 0 so the fold constant is 0 -- but the instruction FORM differs too, so the pointer expression is not yet the original one. The 257-byte record shape is also still a guess: only the word at +0 and the byte at +0xfc are evidenced."
 state = "open"
+
+[[plan.investigation]]
+name = "segdoc-annotation-trap"
+finding = "This project hit it and it is now fixed in the kit at d5ab9c2. segdoc.py --check counted a second table in docs/00-map.md as segment rows and reported 14 rows on disk against 6 computed, and the remedy it printed -- the regenerate line in the files own header -- would have replaced the whole document with the generated table. The Crt reading was moved to docs/01-crt.md at the time to get out of the way; with the fix in, a second table in 00-map.md would be safe again. Left as a note rather than moving it back: two documents is the better shape anyway."
+state = "resolved"
+resolution = "Fixed in kit d5ab9c2 with wiki/observations/annotation-counted-then-overwritten alongside it. Verified four ways: a second table no longer reports drift, a write to an annotated file is refused with the file intact, a genuinely wrong size is still caught and still exits 1, and a fresh file still generates and regenerates."
