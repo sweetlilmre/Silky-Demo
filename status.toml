@@ -24,7 +24,8 @@ state = "open"
 [[plan.investigation]]
 name = "barsinc-differs-from-binary"
 finding = "bin/BARS.INC shipped with the demo and holds Procedure DeltaPal, whose every instruction corresponds to 1000:002b except one: the source writes rep outsb and the binary does lodsb, out dx al, loop. Equivalent in effect, different in bytes, so the include we hold is a VARIANT of the source this binary was built from and not that source. Which direction the edit went is unsettled; a rep outsb to the DAC was known to be too fast for some cards, so either is plausible. This matters beyond one routine: it sets how far BARS.INC can be trusted as ground truth for anything else it contains, and Drawit and PutPixel are also in it. The include did give up one original identifier for free -- lea si,t against lea si,[0x328] names DGROUP 0x328 as t, the 768 byte palette buffer."
-state = "open"
+state = "resolved"
+resolution = "PARTLY, AND NOW MEASURED. BARS.INC compiled unmodified reproduces five routines exactly: RotPal2 at 015d, RotPal3 at 01ff, RotPal0 at 02a1, RotPal1 at 0449 and rotpal at 05f1 -- 1262 bytes with ZERO unexplained differing bytes. Every difference is a far pointer into the System segment or a DGROUP variable address, and both converge as the reconstruction completes. Corroborating details that could not be luck: RotPal2 frames 0x32 bytes of locals in both, which is Loop and loop2 as bytes plus Tmp as sixteen RGBt, so even the UNUSED loop2 is confirmed -- without it the frame would be 49. And rotpals relative call to RotPal0, e8 92 fc, is identical, so all four rotators are exactly the original sizes. So the include IS the original source, with edits: DeltaPal writes rep outsb where the binary does lodsb/out/loop, and Drawit declares F : File, never uses it, and has a conspicuous gap before its End where the scroll.col loading the binary performs has been removed. Treat BARS.INC as the original at a different revision: compile each routine and let the bytes decide, which is now cheap."
 
 [[plan.investigation]]
 name = "twin-routines-02a1-0449"
@@ -68,4 +69,9 @@ resolution = "Understood and worked around: main now calls the transcribed routi
 [[plan.investigation]]
 name = "first-three-program-routines-identical"
 finding = "WaitRetrace at 1000:0000, GotoScnPos at 1000:000e and DeltaPal at 1000:002b are transcribed and rebuild to 69 of 71 bytes identical. The only two differences are DGROUP variable addresses: mov bx,ScnPos is 8b 1e 2c 06 against our 8b 1e 44 03, and lea si,T is 8d 36 28 03 against our 8d 36 44 00. Our DGROUP is smaller because almost nothing is declared yet, so those two converge as the reconstruction grows; every instruction byte already agrees. NOTABLE: DeltaPal matches using the transcription taken from the BINARY -- lodsb, out dx al, loop -- and not bin/BARS.INC, which writes rep outsb there. That is independent confirmation of barsinc-differs-from-binary, obtained by building rather than by reading."
+state = "open"
+
+[[plan.investigation]]
+name = "transcribe-the-rest-of-barsinc"
+finding = "Four BARS.INC routines are still untranscribed: Drawit at 0052, PlayPal at 064b, StartPal at 095e, and whatever fills the gap. Drawit and PlayPal are the two that will not compile as-is -- Drawit is missing the binarys scroll.col loading, and PlayPal references Value, Value2, Value3, Count, Count2, Count3 and PalCol which are declared outside the include. Bringing them in needs those globals declared and Drawits file section reconstructed from 1000:0052, where the literal scroll.col sits at 0047 and the System file group 04a9/0822/0850/093b is called. Doing so would carry the reconstruction from 002b to 09fb in one contiguous run, which is about half the program segment."
 state = "open"

@@ -97,4 +97,27 @@ The first version of this table said `064b` was `StartPal`. It is **`PlayPal`**,
 
 The descriptions in [05-routines.md](05-routines.md) were right — `064b` builds and `095e` ramps. Only the two names were swapped, in the commit that introduced them.
 
-**This does not make `BARS.INC` ground truth.** Its `DeltaPal` still does not match the binary — see `barsinc-differs-from-binary`. What it is now is a set of testable hypotheses: with the toolchain proven and `MODEX` rebuilt byte-identically, each routine it contains can be compiled and compared, and the byte comparison decides whether that routine is the one this binary was built from.
+### Tested: the include IS the source for these five
+
+`BARS.INC` was compiled **unmodified** and the result compared against the original.
+
+| routine | segment | bytes | System far pointers | DGROUP addresses | unexplained |
+|---|---|---:|---:|---:|---:|
+| `RotPal2` | `015d` | 162 | 4 | 4 | **0** |
+| `RotPal3` | `01ff` | 162 | 4 | 4 | **0** |
+| `RotPal0` | `02a1` | 424 | 25 | 32 | **0** |
+| `RotPal1` | `0449` | 424 | 25 | 32 | **0** |
+| `rotpal` | `05f1` | 90 | 1 | 4 | **0** |
+
+**1,262 bytes, zero unexplained differing bytes.** Every difference is a far pointer into the System segment or a DGROUP variable address — relocation and placement, both of which converge as the reconstruction completes.
+
+Two details rule out coincidence. `RotPal2` frames `0x32` bytes of locals in both builds, which is `Loop` and `loop2` as bytes plus `Tmp : Array[1..16] of RGBt` — so even the **unused** `loop2` is confirmed, since without it the frame would be 49. And `rotpal`'s relative call to `RotPal0`, `e8 92 fc`, is byte-identical, which means all four rotators compile to exactly the original sizes.
+
+### So what is BARS.INC?
+
+**The original source, at a different revision.** Two edits are known:
+
+* `DeltaPal` writes `rep outsb` where the binary does `lodsb` / `out dx,al` / `loop`.
+* `Drawit` declares `F : File`, never uses it, and has a conspicuous gap before its `End` — the `scroll.col` loading that `1000:0052` performs has been taken out.
+
+The working rule is therefore: compile each routine and let the bytes decide. That is now cheap.

@@ -22,6 +22,8 @@ var
   { [re] DGROUP 0x62c. gotoscnpos adds 0xbb80 to it and hands the sum to the
     CRTC start address. Name is ours; BARS.INC does not declare it. }
   ScnPos : Word;
+  { [re] DGROUP 0x320, named GlobCount by BARS.INC's rotpal. }
+  GlobCount : Word;
 
 { [re] 1000:0000, 14 bytes. Called near by DeltaPal -- `e8` with no `push cs`
   at 1000:002e -- so it is a local procedure, not far. bin/BARS.INC calls it
@@ -85,6 +87,123 @@ asm
   pop ds
 end;
 
+{ [re] The four rotators and their dispatcher, TRANSCRIBED FROM bin/BARS.INC
+  rather than from the bytes, deliberately: the include's structure already
+  agrees with the reading in docs/04, so compiling it is the test of whether
+  the include IS the source for these routines. Segment order is 015d RotPal2,
+  01ff RotPal3, 02a1 RotPal0, 0449 RotPal1, 05f1 rotpal -- which is the order
+  BARS.INC declares them in, and this file keeps it. }
+
+Procedure RotPal2;
+Var
+    Loop,loop2 : Byte;
+    Tmp : Array[1..16] of RGBt;
+Begin
+   For Loop := 1 to 16 do
+   Tmp[Loop] := T[112+Loop];
+   move(T[1],T[17],336);
+   For Loop := 1 to 16 do
+   T[Loop] := Tmp[17-Loop];
+End;
+
+Procedure RotPal3;
+Var
+    Loop,loop2 : Byte;
+    Tmp : Array[1..16] of RGBt;
+begin
+   For Loop := 1 to 16 do
+   Tmp[Loop] := T[Loop];
+   move(T[17],T[1],336);
+   For Loop := 1 to 16 do
+   T[112+Loop] := Tmp[17-Loop];
+end;
+
+Procedure RotPal0;
+Var
+    Tmp : Rgbt;
+Begin
+   tmp := t[16];
+   move(t[1],t[2],15*3);
+   t[1] := tmp;
+
+   tmp := t[32];
+   move(t[17],t[18],15*3);
+   t[17] := tmp;
+
+   tmp := t[48];
+   move(t[33],t[34],15*3);
+   t[33] := tmp;
+
+   tmp := t[64];
+   move(t[49],t[50],15*3);
+   t[49] := tmp;
+
+   tmp := t[80];
+   move(t[65],t[66],15*3);
+   t[65] := tmp;
+
+   tmp := t[96];
+   move(t[81],t[82],15*3);
+   t[81] := tmp;
+
+   tmp := t[112];
+   move(t[97],t[98],15*3);
+   t[97] := tmp;
+
+   tmp := t[128];
+   move(t[113],t[114],15*3);
+   t[113] := tmp;
+End;
+
+Procedure RotPal1;
+Var
+    Tmp : Rgbt;
+Begin
+   tmp := t[1];
+   move(t[2],t[1],15*3);
+   t[16] := tmp;
+
+   tmp := t[17];
+   move(t[18],t[17],15*3);
+   t[32] := tmp;
+
+   tmp := t[33];
+   move(t[34],t[33],15*3);
+   t[48] := tmp;
+
+   tmp := t[49];
+   move(t[50],t[49],15*3);
+   t[64] := tmp;
+
+   tmp := t[65];
+   move(t[66],t[65],15*3);
+   t[80] := tmp;
+
+   tmp := t[81];
+   move(t[82],t[81],15*3);
+   t[96] := tmp;
+
+   tmp := t[97];
+   move(t[98],t[97],15*3);
+   t[112] := tmp;
+
+   tmp := t[113];
+   move(t[114],t[113],15*3);
+   t[128] := tmp;
+End;
+
+Procedure rotpal;
+begin
+   inc(GlobCount);
+   case globcount of
+        1..200 : rotpal0;
+      201..320 : rotpal2;
+      321..520 : rotpal1;
+      521..640 : rotpal3;
+   end;
+   If GlobCount = 640 then GlobCount := 0;
+end;
+
 begin
   { [re] NOT the original main block, which is 1000:11ad and calls twenty-odd
     routines. This exists so the smart linker keeps what has been transcribed:
@@ -94,4 +213,5 @@ begin
   SetModeX;
   GotoScnPos;
   DeltaPal;
+  rotpal;
 end.
