@@ -31,6 +31,10 @@ type
     so the other fields have no recoverable meaning and are named for that
     rather than guessed at.
 
+    [reading] Only the two written fields are evidenced. The runs of unread
+    bytes between and after them fill the record out to its measured size;
+    how the author actually divided that space is not recoverable.
+
     [re] 0x101 comes from `mov ax,$0101` / `mul` at 113c:0018; the two fields
     are the word at +0 and the byte at +$fc. See table-at-dgroup-0717. }
   TEntry = record
@@ -47,6 +51,10 @@ var
 
   { More of this unit's data, which nothing in the program reads. It is
     declared so that everything allocated after it lands where it should.
+
+    [reading] Only its size is evidenced. A longer table with fewer spare
+    bytes after it would fill the same space just as well; what argues
+    against that is the count the initialisation loop runs to.
 
     [re] Only its SIZE is evidenced.
     Crt's variables start at 0x5182 in the original -- the lowest DGROUP

@@ -190,7 +190,11 @@ begin
 end;
 
 
-{ Allocates the font and reads gold.Fnt into it. }
+{ Allocates the font and reads gold.Fnt into it.
+
+  [reading] The file variable is the only local this routine uses. The rest of
+  the frame is filled here by a string and a long integer, and that pairing is
+  a guess: the total is measured, the way it divides up is not. }
 procedure LoadFont;
 var
   F     : File;
@@ -298,7 +302,12 @@ end;
 { Copies one column of the current glyph into the scroll area. Both the
   source and the destination are in video memory, so it runs in the VGA's
   latch mode: one byte moved shifts four pixels and the CPU never sees
-  the data. Sets ScrollDone when the glyph runs out. }
+  the data. Sets ScrollDone when the glyph runs out.
+
+  [reading] Only the first of the three locals is ever used. The other two are
+  declared to fill out the frame, and any declaration of the same total size
+  would compile to the same code -- so their number and their types are a
+  guess, not a measurement. }
 procedure Scroll;
 var
   Dest  : Word;

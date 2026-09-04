@@ -17,7 +17,11 @@ type
   { A 257-byte record. This unit sets only two of its fields and reads none
     of them back, and nothing else in the program touches the table at all --
     so the other fields have no recoverable meaning and are named for that
-    rather than guessed at. }
+    rather than guessed at.
+
+    [reading] Only the two written fields are evidenced. The runs of unread
+    bytes between and after them fill the record out to its measured size;
+    how the author actually divided that space is not recoverable. }
   TEntry = record
     Head    : Word;                     { +$000 <- $FFFF }
     Unread1 : array[1..250] of Byte;    { +$002 }
@@ -29,7 +33,11 @@ var
   Tbl : array[1..67] of TEntry;
 
   { More of this unit's data, which nothing in the program reads. It is
-    declared so that everything allocated after it lands where it should. }
+    declared so that everything allocated after it lands where it should.
+
+    [reading] Only its size is evidenced. A longer table with fewer spare
+    bytes after it would fill the same space just as well; what argues
+    against that is the count the initialisation loop runs to. }
   Unread : array[1..1573] of Byte;
 
 procedure ClearTable; far;

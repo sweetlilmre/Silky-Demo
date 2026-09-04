@@ -312,9 +312,11 @@ end;
 
   [re] 1000:0aba, 118 bytes. Frame 0x184 = 388: the File is at bp-0x80 so it is
   declared first, and 260 bytes follow it that this routine never touches --
-  the same shape as Drawit's unused F. A String plus a LongInt makes 260
-  exactly; the composition is not recoverable from the frame size alone, only
-  the total is. }
+  the same shape as Drawit's unused F.
+
+  [reading] The file variable is the only local this routine uses. The rest of
+  the frame is filled here by a string and a long integer, and that pairing is
+  a guess: the total is measured, the way it divides up is not. }
 procedure LoadFont;
 var
   F     : File;
@@ -457,6 +459,11 @@ end;
 
   [re] Frame is 6 bytes and only [bp-2] is used, so two words are declared
   and never touched. The other three variables it names are the program's.
+
+  [reading] Only the first of the three locals is ever used. The other two are
+  declared to fill out the frame, and any declaration of the same total size
+  would compile to the same code -- so their number and their types are a
+  guess, not a measurement.
 
   [re] The dead `mov dx,3` is at 1000:0f82, overwritten by the very next
   instruction before it can be read. Transcribed anyway -- the wiki's
