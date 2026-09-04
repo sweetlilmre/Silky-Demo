@@ -70,4 +70,8 @@ alongside = ["src/BARS.INC"]
 [install]
 to = "run"
 
-[install.alongside]
+# The compiler names its output after the source and offers no way to say
+# otherwise, so the rename happens here. run/ holds ORIG.EXE beside OURS.EXE
+# so the two can be watched one after the other without a rebuild in between.
+[install.as]
+SILKY = "OURS.EXE"
