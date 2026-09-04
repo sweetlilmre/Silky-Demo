@@ -50,7 +50,7 @@ The surviving hypothesis is therefore **the compiler, not the source**: a TP6 pa
 
 ## What is not known
 
-* **The 67-record table at DGROUP `0x717`.** The palette unit's init writes `0xffff` to each record's first word and zero to its byte at `+0xfc`, and nothing else in the unit touches it. Its purpose is unread. See [02-units.md](02-units.md).
+* **The 67-record table at DGROUP `0x717`** — and this one is closed as far as it can be. Nothing in the image reads it: a decode of all five segments finds the fold base `0x717` in exactly one instruction, the init loop itself. Its shape survives and its purpose does not, because there is no consumer to read a purpose from. See [02-units.md](02-units.md).
 * **1,573 bytes of the palette unit's data**, declared by length alone because the linker fixes the total and nothing evidences the composition.
 * **Five declared-and-unused locals** — `Drawit`'s `F`, `RotPal2`'s `loop2`, `ShowFont`'s 255, `Scroll`'s two spare words, `RunScroll`'s one. Each is real: the frame sizes require them.
 * **Which of `Dummy`/`Spare` shapes `LoadFont`'s 260 spare bytes.** Only the total is recoverable from a frame size.
