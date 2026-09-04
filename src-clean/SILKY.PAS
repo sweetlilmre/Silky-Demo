@@ -1,9 +1,14 @@
 {$X+}
+{ Extended syntax. RunScroll calls Crt's ReadKey as a statement and throws the
+  key away, which Turbo Pascal refuses without this. }
 
 program Silky;
 
 { The 1993 Asphyxia demo, written for Silky's eighteenth birthday. }
 
+{ THE ORDER OF THIS CLAUSE IS NOT ARBITRARY. Turbo Pascal lays the units out
+  backwards from the order they are named, so this line decides where each one
+  lands in the executable. Tidying it changes the program's layout. }
 uses Crt, Palette, ModeX;
 
 type
@@ -11,6 +16,8 @@ type
     r, g, b : Byte;
   end;
 
+  { The font: 59 characters, space through 'Z', each 16 by 16 pixels, one
+    byte per pixel. }
   TFont = array[32..90, 1..16, 1..16] of Byte;
 
 const
@@ -103,6 +110,8 @@ var
   Text : array[1..480] of Char;
   Loop : Word;
 
+{ Waits for the start of the next vertical retrace, so a palette upload
+  or a page flip lands in the gap between frames and does not tear. }
 procedure WaitRetrace; assembler;
 { EQUIVALENT PASCAL, reference only:
     repeat until (Port[$3DA] and 8) = 0;
@@ -119,6 +128,8 @@ asm
   jz  @InRetrace    { no -- spin. Falling through means retrace just began }
 end;
 
+{ Points the CRTC at ScnPos, which is how the picture scrolls: the screen
+  is wider than the display, and moving the start address moves the window. }
 procedure GotoScnPos; assembler;
 { EQUIVALENT PASCAL, reference only:
     ofs := ScnPos + $BB80;
@@ -143,6 +154,10 @@ end;
 
 {$I BARS.INC}
 
+{ One step of the fade-out. Clips every channel of all 256 colours to
+  Bright, then lowers Bright, so repeated calls walk the picture down to
+  black. It works on the buffer; DeltaPal is what reaches the hardware.
+  Does nothing at all unless Fading has been set. }
 procedure ClampDown;
 var
   Loop : Byte;
@@ -160,6 +175,7 @@ begin
 end;
 
 
+{ Allocates the font and reads gold.Fnt into it. }
 procedure LoadFont;
 var
   F     : File;
@@ -174,6 +190,8 @@ begin
 end;
 
 
+{ Loads Check2.Cel and draws it 90 rows down. The file is a CEL: an
+  800-byte header and palette, then one byte per pixel, 320 to a row. }
 procedure LoadCheck2;
 var
   F    : File;
@@ -193,6 +211,9 @@ begin
   Close(F);
 end;
 
+{ Loads Asphyx.Cel and burns it into the picture as a MASK -- it plots
+  only where the cel is non-zero, and always in colour 0, so it darkens
+  a shape into whatever is already on screen rather than covering it. }
 procedure LoadAsphyx;
 var
   F    : File;
@@ -213,6 +234,9 @@ begin
 end;
 
 
+{ Draws every glyph of the font into video memory, three screen rows tall,
+  and then frees the font. Nothing reads the font again: the scroller
+  copies glyphs from video memory to video memory after this. }
 procedure ShowFont;
 var
   Row   : Byte;
@@ -256,6 +280,10 @@ begin
 end;
 
 
+{ Copies one column of the current glyph into the scroll area. Both the
+  source and the destination are in video memory, so it runs in the VGA's
+  latch mode: one byte moved shifts four pixels and the CPU never sees
+  the data. Sets ScrollDone when the glyph runs out. }
 procedure Scroll;
 var
   Dest  : Word;
@@ -324,6 +352,14 @@ begin
 end;
 
 
+{ The scrolltext, and the last thing the demo does. Each pass moves the
+  scroll on by one column, cycles the palette and uploads it. A keypress
+  does not quit: it sets Fading, and the loop ends when the fade reaches
+  black.
+
+  EQUIVALENT PASCAL, reference only: there is none. The control flow is a
+  three-way loop with two continuation targets and a pusha/popa pair around
+  three calls, and Pascal expresses none of that. }
 procedure RunScroll;
 var
   Spare : Word;
@@ -386,6 +422,14 @@ begin
 end;
 
 
+{ Splits the screen at scanline 100. Below the split the CRTC restarts at
+  address zero and ignores the scroll offset, so the top half can scroll
+  while the bottom half stays put.
+
+  EQUIVALENT PASCAL, reference only:
+    Crtc[$18] := 100;
+    Crtc[$07] := Crtc[$07] and $EF;
+    Crtc[$09] := Crtc[$09] and $BF; }
 procedure SplitScreen; assembler;
 asm
   mov dx, $03D4  { CRTC index port }
@@ -410,17 +454,25 @@ asm
   out dx, al     { the compare is therefore exactly 100 }
 end;
 
+{ Back to 80x25 text, which is where DOS was.
+
+  EQUIVALENT PASCAL, reference only: TextMode(CO80). That emits a Crt call
+  and a good deal more, where this is the BIOS call and nothing else. }
 procedure TextMode3; assembler;
 asm
   mov ax, $0003  { BIOS mode 3 }
   int $10        { 80x25 colour text, which is where DOS was }
 end;
 
+{ Fills the whole palette with white, which is what the demo fades down
+  from. }
 procedure WhiteOut;
 begin
   FillChar(T,768,63);
 end;
 
+{ The opening fade. Sixty-four passes, each clipping every colour a little
+  darker and uploading, so the screen falls from white to black. }
 procedure FadeOut;
 var
   Level : Byte;
@@ -438,6 +490,12 @@ begin
   end;
 end;
 
+{ The closing sequence: point the CRTC at the scroll area, run the
+  scrolltext until the fade ends it, then give the screen back to DOS.
+
+  EQUIVALENT PASCAL, reference only: the three calls as statements. Written
+  that way it would carry a stack frame and a stack check, which this has
+  not got. }
 procedure Finish; assembler;
 asm
   call GotoScnPos  { point the CRTC at the start of the scroll area }

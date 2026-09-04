@@ -1,5 +1,8 @@
 {$X+}
-{ [re] EXTENDED SYNTAX, and it is required rather than stylistic. RunScroll
+{ Extended syntax. RunScroll calls Crt's ReadKey as a statement and throws the
+  key away, which Turbo Pascal refuses without this.
+
+  [re] and it is required rather than stylistic. RunScroll
   calls Crt's ReadKey as a statement and throws the result away, which Turbo
   Pascal refuses without it -- 1144:030d is a FUNCTION, int 16h with ah=0
   returning the key in AL, and nothing at the call site consumes it. $X is a
@@ -15,7 +18,11 @@ program Silky;
   from DeltaPal at 002b through StartPal at 095e -- the include's declaration
   order IS the segment order, which is one of the reasons to believe it. }
 
-{ [re] THE CLAUSE IS IN REVERSE OF THE SEGMENT ORDER, deliberately. Turbo
+{ THE ORDER OF THIS CLAUSE IS NOT ARBITRARY. Turbo Pascal lays the units out
+  backwards from the order they are named, so this line decides where each one
+  lands in the executable. Tidying it changes the program's layout.
+
+  [re] In reverse of the segment order, deliberately. Turbo
   Pascal 6 lays the units out backwards from the order they are named: with
   ModeX, Palette, Crt the map came out SILKY, CRT, PALETTE, MODEX, while the
   original is SILKY, MODEX, PALETTE, Crt. Naming them backwards puts them
@@ -29,7 +36,10 @@ type
     r, g, b : Byte;
   end;
 
-  { [re] The bounds come from the blitter's folded subscript at 0cb1, which
+  { The font: 59 characters, space through 'Z', each 16 by 16 pixels, one
+    byte per pixel.
+
+    [re] The bounds come from the blitter's folded subscript at 0cb1, which
     biases by 0x2011 = 32*256 + 1*16 + 1. 59 characters of 16 by 16 is 15104
     bytes, which is both SizeOf pushed to New at 0ac9 and the size of
     bin/GOLD.FNT on disk. Characters 32 to 90 is space through Z, which is the
@@ -160,7 +170,10 @@ var
   Text : array[1..480] of Char;
   Loop : Word;
 
-{ [re] 1000:0000, 14 bytes. Called NEAR by DeltaPal -- `e8` with no `push cs`
+{ Waits for the start of the next vertical retrace, so a palette upload
+  or a page flip lands in the gap between frames and does not tear.
+
+  [re] 1000:0000, 14 bytes. Called NEAR by DeltaPal -- `e8` with no `push cs`
   at 1000:002e -- so it is local, not far. BARS.INC calls it but does not
   declare it. }
 { [re] Transcribed from the original at this address, 14 bytes.
@@ -181,7 +194,10 @@ asm
   jz  @InRetrace    { no -- spin. Falling through means retrace just began }
 end;
 
-{ [re] 1000:000e, 29 bytes. BARS.INC's StartPal opens with `gotoscnpos`, and
+{ Points the CRTC at ScnPos, which is how the picture scrolls: the screen
+  is wider than the display, and moving the start address moves the window.
+
+  [re] 1000:000e, 29 bytes. BARS.INC's StartPal opens with `gotoscnpos`, and
   095e -- which is StartPal -- opens with a near call to 000e, so that is this
   routine's original name. CRTC 0c and 0d are the start address, high then low. }
 { [re] Transcribed from the original at this address, 29 bytes.
@@ -251,7 +267,12 @@ end;
   @asm 000 1000:002b +28 DeltaPal }
 {$I BARS.INC}
 
-{ [re] 1000:09fb, 191 bytes. Frames 2 bytes for a byte counter. Runs the whole
+{ One step of the fade-out. Clips every channel of all 256 colours to
+  Bright, then lowers Bright, so repeated calls walk the picture down to
+  black. It works on the buffer; DeltaPal is what reaches the hardware.
+  Does nothing at all unless Fading has been set.
+
+  [re] 1000:09fb, 191 bytes. Frames 2 bytes for a byte counter. Runs the whole
   256-entry palette and clips every channel to Bright, then lowers Bright by
   one -- so repeated calls walk the picture down to black without touching the
   DAC directly, since DeltaPal is what uploads T. }
@@ -272,7 +293,9 @@ begin
 end;
 
 
-{ [re] 1000:0aba, 118 bytes. Frame 0x184 = 388: the File is at bp-0x80 so it is
+{ Allocates the font and reads gold.Fnt into it.
+
+  [re] 1000:0aba, 118 bytes. Frame 0x184 = 388: the File is at bp-0x80 so it is
   declared first, and 260 bytes follow it that this routine never touches --
   the same shape as Drawit's unused F. A String plus a LongInt makes 260
   exactly; the composition is not recoverable from the frame size alone, only
@@ -291,7 +314,10 @@ begin
 end;
 
 
-{ [re] 1000:0b30, 196 bytes. Frame 0x4e4 = 1252, which decomposes exactly:
+{ Loads Check2.Cel and draws it 90 rows down. The file is a CEL: an
+  800-byte header and palette, then one byte per pixel, 320 to a row.
+
+  [re] 1000:0b30, 196 bytes. Frame 0x4e4 = 1252, which decomposes exactly:
   File 128 at bp-0x80, then 800, then 320, then two words. The 800 is a CEL
   header plus its 768-byte palette, and 20000 - 800 is 19200 = 320 * 60, which
   is the 60 rows the outer loop counts. Line is ZERO-based: the fetch is
@@ -316,7 +342,11 @@ begin
   Close(F);
 end;
 
-{ [re] 1000:0bf4, 189 bytes. Frame 0x408 = 1032: File 128, the same 800-byte
+{ Loads Asphyx.Cel and burns it into the picture as a MASK -- it plots
+  only where the cel is non-zero, and always in colour 0, so it darkens
+  a shape into whatever is already on screen rather than covering it.
+
+  [re] 1000:0bf4, 189 bytes. Frame 0x408 = 1032: File 128, the same 800-byte
   header, then only 100 and two words. 8800 - 800 is 8000 = 100 * 80, and the
   outer loop runs 5 to 84, which is those 80 rows. Line is ONE-based here,
   unlike Check2's: the fetch is [bp+di-0x405] with di = X-99, so index 1 lands
@@ -342,7 +372,11 @@ begin
 end;
 
 
-{ [re] 1000:0cb1, 700 bytes. Renders EVERY glyph into video memory once and
+{ Draws every glyph of the font into video memory, three screen rows tall,
+  and then frees the font. Nothing reads the font again: the scroller
+  copies glyphs from video memory to video memory after this.
+
+  [re] 1000:0cb1, 700 bytes. Renders EVERY glyph into video memory once and
   then frees the font -- 0f5b pushes the pointer and 0x3b00 to 11a6:0254,
   whose frame reads a size at bp+6 and a far pointer at bp+8, the Dispose
   helper matching the New at 023f. Each source row is drawn three screen rows
@@ -395,22 +429,27 @@ begin
 end;
 
 
-{ [re] 1000:0f6d, 175 bytes. The scroller, and it is hardware-accelerated:
+{ Copies one column of the current glyph into the scroll area. Both the
+  source and the destination are in video memory, so it runs in the VGA's
+  latch mode: one byte moved shifts four pixels and the CPU never sees
+  the data. Sets ScrollDone when the glyph runs out.
+
+  [re] 1000:0f6d, 175 bytes. The scroller, and it is hardware-accelerated:
   Graphics Controller register 5 is set to write mode 1 for the duration, which
   copies through the VGA latches so one byte moved shifts four pixels. Source
   and destination are BOTH in video memory -- ShowFont drew every glyph there
   and then freed the font, so this copies VRAM to VRAM.
 
-  Frame is 6 bytes and only [bp-2] is used, so two words are declared and never
-  touched. The other three variables it names are the program's.
+  [re] Frame is 6 bytes and only [bp-2] is used, so two words are declared
+  and never touched. The other three variables it names are the program's.
 
-  1000:0f82 is `mov dx,3`, overwritten by the very next instruction before it
-  can be read. It is dead and it is transcribed anyway -- the wiki's
+  [re] The dead `mov dx,3` is at 1000:0f82, overwritten by the very next
+  instruction before it can be read. Transcribed anyway -- the wiki's
   the-original-does-nothing: a reconstruction never invents such a line, so
   leaving it out shifts every byte after it.
 
-  EQUIVALENT PASCAL, reference only: there is none worth writing. The routine
-  is latch-mode block copy and port programming from end to end. }
+  [re] EQUIVALENT PASCAL, reference only: there is none worth writing. The
+  routine is latch-mode block copy and port programming from end to end. }
 procedure Scroll;
 var
   Dest  : Word;
@@ -479,24 +518,29 @@ begin
 end;
 
 
-{ [re] 1000:101c, 133 bytes. The scrolltext loop, and the last thing the demo
+{ The scrolltext, and the last thing the demo does. Each pass moves the
+  scroll on by one column, cycles the palette and uploads it. A keypress
+  does not quit: it sets Fading, and the loop ends when the fade reaches
+  black.
+
+  [re] 1000:101c, 133 bytes. The scrolltext loop, and the last thing the demo
   does. It drives every routine transcribed so far: Scroll for one column of
   the current glyph, then PlayPal, RotPal and ClampDown around a pusha/popa
   pair, then DeltaPal to upload, then the CRTC start address. A scancode on
   port $60 sets Fading, and the loop ends when Bright reaches zero -- so the
   keypress does not quit, it starts the fade that quits.
 
-  $X+ IS REQUIRED. ReadKey is a FUNCTION and its result is discarded, which
-  Turbo Pascal only accepts under extended syntax. 1144:030d is int 16h with
-  ah=0 storing into Crt's pending-key byte at 0x5193, and nothing consumes the
-  value at the call site.
+  [re] $X+ is required: ReadKey is a FUNCTION whose result is discarded here,
+  which Turbo Pascal only accepts under extended syntax. Crt's routine at
+  1144:030d is int 16h with ah=0 storing into its pending-key byte at 0x5193,
+  and nothing consumes the value at the call site.
 
-  Frame is 2 bytes, set to zero and never read -- the fifth declared-and-unused
-  local in this program.
+  [re] Frame is 2 bytes, set to zero and never read -- the fifth
+  declared-and-unused local in this program.
 
-  EQUIVALENT PASCAL, reference only: the control flow is a three-way loop with
-  two continuation targets and a pusha/popa pair around three calls, none of
-  which Pascal expresses, so it is transcribed rather than re-expressed. }
+  EQUIVALENT PASCAL, reference only: there is none. The control flow is a
+  three-way loop with two continuation targets and a pusha/popa pair around
+  three calls, and Pascal expresses none of that. }
 procedure RunScroll;
 var
   Spare : Word;
@@ -559,15 +603,20 @@ begin
 end;
 
 
-{ [re] 1000:10a1, 29 bytes, frameless -- an assembler procedure with no
+{ Splits the screen at scanline 100. Below the split the CRTC restarts at
+  address zero and ignores the scroll offset, so the top half can scroll
+  while the bottom half stays put.
+
+  [re] 1000:10a1, 29 bytes, frameless -- an assembler procedure with no
   parameters gets no frame and no stack check.
 
   EQUIVALENT PASCAL, reference only:
     Crtc[$18] := 100;
     Crtc[$07] := Crtc[$07] and $EF;
     Crtc[$09] := Crtc[$09] and $BF;
-  The original steps the index and data ports with inc/dec rather than
-  reloading DX, so it is transcribed. }
+
+  [re] Not what the original emits: it steps the index and data ports with
+  inc/dec rather than reloading DX, so the body is transcribed. }
 procedure SplitScreen; assembler;
 asm
   mov dx, $03D4  { CRTC index port }
@@ -592,24 +641,32 @@ asm
   out dx, al     { the compare is therefore exactly 100 }
 end;
 
-{ [re] 1000:10be, 6 bytes, frameless.
+{ Back to 80x25 text, which is where DOS was.
+
+  [re] 1000:10be, 6 bytes, frameless.
 
   EQUIVALENT PASCAL, reference only: TextMode(CO80). That emits a Crt call
-  and a good deal more; the original is the BIOS call and nothing else. }
+  and a good deal more, where this is the BIOS call and nothing else. }
 procedure TextMode3; assembler;
 asm
   mov ax, $0003  { BIOS mode 3 }
   int $10        { 80x25 colour text, which is where DOS was }
 end;
 
-{ [re] 1000:10c4, 27 bytes. Fills the whole palette buffer with 63 -- every
+{ Fills the whole palette with white, which is what the demo fades down
+  from.
+
+  [re] 1000:10c4, 27 bytes. Fills the whole palette buffer with 63 -- every
   channel at full -- so the screen is white before FadeOut walks it down. }
 procedure WhiteOut;
 begin
   FillChar(T,768,63);
 end;
 
-{ [re] 1000:10df, 181 bytes. Sixty-four passes clipping every channel of all
+{ The opening fade. Sixty-four passes, each clipping every colour a little
+  darker and uploading, so the screen falls from white to black.
+
+  [re] 1000:10df, 181 bytes. Sixty-four passes clipping every channel of all
   256 colours to a ceiling that drops by one each time, uploading after each
   pass. The same shape as ClampDown but unconditional and self-driving, and
   the reason the demo opens by fading up from white. }
@@ -630,12 +687,16 @@ begin
   end;
 end;
 
-{ [re] 1000:1194, 10 bytes, frameless -- three near calls and a ret, which is
+{ The closing sequence: point the CRTC at the scroll area, run the
+  scrolltext until the fade ends it, then give the screen back to DOS.
+
+  [re] 1000:1194, 10 bytes, frameless -- three near calls and a ret, which is
   an assembler procedure. Not an exit routine: RunScroll is the demo's last
   scene, and TextMode3 after it is the cleanup.
 
   EQUIVALENT PASCAL, reference only: the three calls as statements. Written
-  that way it would carry a frame and a stack check the original has not got. }
+  that way it would carry a stack frame and a stack check, which this has
+  not got. }
 procedure Finish; assembler;
 asm
   call GotoScnPos  { point the CRTC at the start of the scroll area }
