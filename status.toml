@@ -48,9 +48,20 @@ outcome = "matches"
 achieved = "R3"
 observer = "maintainer"
 date = "2026-09-04"
-confirmed_at = "c1acac55cc41"
-fingerprint = "be5b794ab57277a1"
+confirmed_at = "cf638cfd2d6f"
+fingerprint = "fa9f2f1f1e2e002b"
 against = "ORIG.EXE"
+binary = "bd6b2a3b16ca04edad29b5b2e33e2a48647543a1e4556e43dbe3994ca8f8f691"
+reaffirmed_on = "2026-09-04"
+
+[artefact."SILKY"]
+ours = "build/SILKY.EXE"
+original = "bin/SILKY.EXE"
+compare = "file"
+sha256 = "bd6b2a3b16ca04edad29b5b2e33e2a48647543a1e4556e43dbe3994ca8f8f691"
+achieved = "R7"
+target = "R7"
+measured_at = "cf638cfd2d6f"
 
 [[plan.investigation]]
 name = "unidentified-units-112f-113c"
