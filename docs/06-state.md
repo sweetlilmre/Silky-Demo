@@ -40,6 +40,8 @@ Its **body** is right — 156 bytes with nothing unexplained, and the near displ
 
 What the seven bytes look like is a fixup rather than a statement. A `jne` onto a near jump, with a short jump inserted to hop over it, is what a code generator produces when it emits a short branch first and, finding it out of range, patches it into a branch to a near jump instead of re-sizing it. Every compiler here sizes the branch correctly on the first pass. That the difference sits in the code generator rather than in the statement is exactly what sixteen source constructs failing to move it would predict.
 
+**And it is a caution about a tell the kit teaches.** `instruction-the-compiler-never-emits` reads "invert the test and jump over an unconditional jump" as the mark of a person writing assembler by hand, because a compiler expands a long branch its own way. Here that same shape sits in code that is demonstrably compiled: `ClampDown`'s body comes out of Pascal byte for byte, near displacement included, and only the branch in front of it differs. So the shape is evidence of a code generator this project has not got, and not, on its own, evidence of a hand.
+
 The surviving hypothesis is therefore **the compiler, not the source**: a TP6 patch level that is neither of the two installed here. Anyone holding another TP6 can settle it in one build.
 
 ## Three things that had to be right before any of this could be measured
