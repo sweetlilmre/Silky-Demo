@@ -24,17 +24,9 @@ What *is* independent is the arithmetic. Each segment's extent is the next one's
 | `1000` | 4848 | **the program.** Names the four data files the demo loads — `scroll.col`, `gold.Fnt`, `Check2.Cel`, `Asphyx.Cel` — and all four are in `bin/`. The MZ entry `CS:IP 0000:119e` lands at offset `0x119e` here, and that instruction calls `11a6:0000`, the runtime's init. No framed far return in 4848 bytes, which is correct: a program body ends in the runtime's halt, not a `RETF`. |
 | `112f` | 208 | **unidentified.** Called from the program at nine sites through `112f:0000` and once through `112f:0043`; calls out only to System. Two framed far returns, `RETF 6` and `RETF 2`. |
 | `113c` | 128 | **unidentified.** Entered at `113c:0045` and `113c:0067`. Holds the load image's only virtual call site — a `CALLF [DI+cb]` at `113c:0079` — so something here is an object with a VMT. |
-| `1144` | 1568 | **Crt**, the RTL's. Not ours to transcribe. Identified by comparison against the sibling target — see below. |
+| `1144` | 1568 | **Crt**, the RTL's. Not ours to transcribe. Named from six of its own routines — see [01-crt.md](01-crt.md). |
 | `11a6` | 2576 | **System**, the runtime. Carries `Runtime error ` and the Borland banner, and `survey.py` finds it calling out to *nothing at all*: everything depends on it and it depends on nobody. |
 | `1247` | 800 | **the data group** — linked last, so it is the image's tail. Not code: 800 bytes with zero far returns and one printable string, which is the demo's entire scroll text. |
-
-## How Crt was identified
-
-`1144` is 1568 bytes, and so is the Crt in the sibling consumer's target — which that project identified from the instructions, not by size: a `mov ah,0x0f; int 10h` init, two text-file records handed to an RTL routine, and a `Crt.Window` whose four parameters validate against `WindMin`/`WindMax`.
-
-Compared byte for byte the two segments differ in 149 places, and the differences are not scattered. **73 of 76 differing runs are exactly one word wide, and every one of those 73 carries the identical delta `+0x163e`** — one constant DGROUP shift, which is the same code with its variables at a different base. The three runs that are not a clean word are the relocated segment bytes: `a6` against `f5`, our System at `11a6` against theirs at `11f5`, and `47` against `eb`, our data group at `1247` against theirs at `12eb`.
-
-One shared unit linked into two programs, measured rather than recognised. It removes 1568 bytes — 15% of the load image — from what this reconstruction has to write.
 
 ## What the tail is not
 

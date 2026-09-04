@@ -34,18 +34,38 @@ layout = "docs/00-map.md"    # the segment/size document coverage measures
 # runtime, and survey.py finds it calling OUT to nothing at all -- everything
 # depends on it and it depends on nobody, which is what a runtime looks like.
 #
-# Crt is named by COMPARISON against the sibling consumer, which identified its
-# own 1193 from the instructions (a `mov ah,0x0f; int 10h` init, two text-file
-# records handed to an RTL routine, and a Crt.Window whose four parameters
-# validate against WindMin/WindMax). Our 1144 is 1568 bytes and so is that one.
-# Compared byte for byte they differ in 149 places, and the differences are not
-# scattered: 73 of 76 differing runs are exactly one word wide and EVERY one of
-# those 73 carries the identical delta of +0x163e, which is one constant DGROUP
-# shift -- the same code with its variables at a different base. The three runs
-# that are not a clean word are the relocated segment bytes, a6 against f5
-# (our System at 11a6, theirs at 11f5) and 47 against eb (our DGROUP at 1247,
-# theirs at 12eb). One shared unit linked into two programs, measured rather
-# than recognised.
+# Crt is named FROM OUR OWN BYTES. Six routines were read out of 1144 with
+# substrate/disasm.py, and each is a Crt export doing what only Crt does:
+#
+#   0000  the unit init. Builds two records at DGROUP 0x5196 and 0x5296 --
+#         exactly 0x100 apart, which is the size of a Turbo Pascal TextRec --
+#         and hands each to a System routine. That is Input and Output being
+#         assigned. It first calls 002e, which does `mov ah,0x0f` + int 10h,
+#         takes mode 7 or anything <= 3 as it finds it and forces TextMode(3)
+#         otherwise, then `mov ah,8` + int 10h to read the attribute at the
+#         cursor and stores it, masked with 0x7f, as TextAttr.
+#   0180  Window. Four BYTE parameters off ss:[bx+4..0xa], rejected if X1 > X2
+#         or Y1 > Y2, decremented to 0-based so that 0 is invalid, bounds
+#         checked against [0x5190]/[0x5191], stored to [0x518a] and [0x518c]
+#         -- WindMin and WindMax -- then GotoXY(1,1). `retf 8` is four byte
+#         parameters pushed as four words.
+#   01c0  ClrScr. AX=0x600, BH from TextAttr at [0x5188], CX/DX the window
+#         bounds, through the int 10h thunk.
+#   02d4  Sound. `in 0x61` / `or al,3` / `out 0x61` gates the speaker, then
+#         `mov al,0xb6` / `out 0x43` programs 8253 channel 2 for a square
+#         wave, and the divisor goes out to 0x42 low byte then high. retf 2.
+#   02f4  NoSound. `in 0x61` / `and al,0xfc` / `out 0x61`, no parameters.
+#   0156  ReadKey, `mov ah,0` + int 16h -- and at 015c the Ctrl-Break path
+#         writes '^' then 'C' to the console and issues int 23h.
+#   0609  the int 10h thunk itself, preserving si, di, bp and es.
+#
+# CORROBORATION, and it is not the evidence. verdiff.py against the sibling
+# consumer's Crt reports 1422 of 1568 bytes aligning, with every difference one
+# constant DGROUP shift of +0x163e across 73 words plus three relocated segment
+# bytes, and concludes the unit's source is unchanged. That comparison is what
+# first suggested the name, and it was only available because another target on
+# this machine happens to link the same unit -- which is luck, not method. The
+# routines above are what a target with no sibling can still read.
 rtl   = ["System", "Crt"]
 noseg = []
 
