@@ -10,9 +10,13 @@ unit ModeX;
 interface
 
 var
-  { [re] DGROUP 0x816 in the original. The PROGRAM writes it (1000:11d8 sets
-    it to 0xa0) and both routines here read it, so it is the unit's and
-    exported rather than local. }
+  { The CRTC Offset register's value, which counts in WORDS -- so the byte
+    stride from one screen row to the next is twice this. SetModeX writes it
+    to the hardware and PutPixel uses it to find a row; the program sets it
+    before calling either.
+
+    [re] DGROUP 0x816 in the original, written by the program at 1000:11d8
+    with 0xa0, so it is the unit's and exported rather than local. }
   LineWidth : Byte;
 
 procedure PutPixel(x, y : Integer; col : Byte);
@@ -47,8 +51,7 @@ begin
     expression to LongInt and emitted an ADC the original does not have. }
   SetPlane(x mod 4);
   x := x div 4;
-  { [re] The doubling is the CRTC Offset register counting in words, so the
-    byte stride per line is twice LineWidth. }
+  { Doubled because LineWidth is the CRTC Offset, which counts in words. }
   Mem[$A000 : LineWidth * y * 2 + x] := col;
 end;
 

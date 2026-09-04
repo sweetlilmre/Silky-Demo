@@ -1,4 +1,7 @@
 {$G-}
+{ 286 code generation is OFF for this unit, and deliberately -- the rest of
+  the program is built with it on, so removing this line changes the code
+  this unit emits. }
 
 unit Palette;
 
@@ -11,6 +14,10 @@ procedure SetPalette(col, r, g, b : Byte);
 implementation
 
 type
+  { A 257-byte record. This unit sets only two of its fields and reads none
+    of them back, and nothing else in the program touches the table at all --
+    so the other fields have no recoverable meaning and are named for that
+    rather than guessed at. }
   TEntry = record
     Head    : Word;                     { +$000 <- $FFFF }
     Unread1 : array[1..250] of Byte;    { +$002 }
@@ -21,6 +28,8 @@ type
 var
   Tbl : array[1..67] of TEntry;
 
+  { More of this unit's data, which nothing in the program reads. It is
+    declared so that everything allocated after it lands where it should. }
   Unread : array[1..1573] of Byte;
 
 procedure ClearTable; far;
@@ -54,6 +63,7 @@ begin
 end;
 
 begin
+  { Seeds the random number generator, then clears the table above. }
   Randomize;
   ClearTable;
 end.

@@ -1,5 +1,9 @@
 {$G-}
-{ [re] 286 code generation OFF for this unit, against the /$G+ on the command
+{ 286 code generation is OFF for this unit, and deliberately -- the rest of
+  the program is built with it on, so removing this line changes the code
+  this unit emits.
+
+  [re] Measured: against the /$G+ on the command
   line. Measured: at 113c:0018 the original computes the record offset with
   `mov ax,$0101` then `mul`, which is 8086. With $G+ Turbo Pascal emits
   `imul di,[bp-2],$0101` instead, a 186 instruction, and the unit diverges
@@ -22,10 +26,13 @@ procedure SetPalette(col, r, g, b : Byte);
 implementation
 
 type
-  { [re] 0x101 = 257 bytes per record, from `mov ax,$0101` / `mul` at
-    113c:0018. The only two fields the original touches are a word at +0 and
-    a byte at +$fc; everything between is unread, so it is named Unread rather
-    than guessed at. See the table-at-dgroup-0717 investigation. }
+  { A 257-byte record. This unit sets only two of its fields and reads none
+    of them back, and nothing else in the program touches the table at all --
+    so the other fields have no recoverable meaning and are named for that
+    rather than guessed at.
+
+    [re] 0x101 comes from `mov ax,$0101` / `mul` at 113c:0018; the two fields
+    are the word at +0 and the byte at +$fc. See table-at-dgroup-0717. }
   TEntry = record
     Head    : Word;                     { +$000 <- $FFFF }
     Unread1 : array[1..250] of Byte;    { +$002 }
@@ -38,7 +45,10 @@ var
     displacement, so its base constant is 0x717 and Tbl[1] lands at 0x818. }
   Tbl : array[1..67] of TEntry;
 
-  { [re] 1575 MORE BYTES OF PALETTE DATA, and only their SIZE is evidenced.
+  { More of this unit's data, which nothing in the program reads. It is
+    declared so that everything allocated after it lands where it should.
+
+    [re] Only its SIZE is evidenced.
     Crt's variables start at 0x5182 in the original -- the lowest DGROUP
     operand anywhere in its segment -- and Tbl starts at 0x818, so this unit
     owns 18794 bytes. The init loop evidences 67 records of 257, which is
@@ -96,8 +106,9 @@ begin
 end;
 
 begin
-  { [re] 113c:0067, the initialisation section. The System routine it calls
-    first is RANDOMIZE: 11a6:0815 is b4 2c cd 21, which is DOS Get System
+  { Seeds the random number generator, then clears the table above.
+
+    [re] 113c:0067. The System routine it calls first is RANDOMIZE: 11a6:0815 is b4 2c cd 21, which is DOS Get System
     Time, storing CX and DX into DGROUP 0x316 -- that four-byte value is
     RandSeed. Nothing else in the image calls it. }
   Randomize;

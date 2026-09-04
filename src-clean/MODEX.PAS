@@ -6,6 +6,10 @@ unit ModeX;
 interface
 
 var
+  { The CRTC Offset register's value, which counts in WORDS -- so the byte
+    stride from one screen row to the next is twice this. SetModeX writes it
+    to the hardware and PutPixel uses it to find a row; the program sets it
+    before calling either. }
   LineWidth : Byte;
 
 procedure PutPixel(x, y : Integer; col : Byte);
@@ -20,6 +24,7 @@ procedure PutPixel(x, y : Integer; col : Byte);
 begin
   SetPlane(x mod 4);
   x := x div 4;
+  { Doubled because LineWidth is the CRTC Offset, which counts in words. }
   Mem[$A000 : LineWidth * y * 2 + x] := col;
 end;
 
