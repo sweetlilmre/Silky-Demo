@@ -38,6 +38,17 @@ var
     displacement, so its base constant is 0x717 and Tbl[1] lands at 0x818. }
   Tbl : array[1..67] of TEntry;
 
+  { [re] 1575 MORE BYTES OF PALETTE DATA, and only their SIZE is evidenced.
+    Crt's variables start at 0x5182 in the original -- the lowest DGROUP
+    operand anywhere in its segment -- and Tbl starts at 0x818, so this unit
+    owns 18794 bytes. The init loop evidences 67 records of 257, which is
+    17219, and 1573 is the remainder -- 1575 overshot by two, which the
+    +2 delta on all 82 Crt and System operands reported exactly. Nothing in the 124 bytes of PALETTE
+    touches it, so its type and purpose are unknown and it is declared by
+    length alone. Inflating Tbl to array[1..73] would also fit the arithmetic
+    and would contradict the loop bound, which counts to 67. }
+  Unread : array[1..1573] of Byte;
+
 { [re] 113c:0000. Called by the initialisation section below, which is why it
   is emitted first. Frames 6 bytes: a Word counter and a far pointer.
   FAR: it ends in retf, and the init at 113c:0076 pushes CS before the

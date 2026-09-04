@@ -132,49 +132,33 @@ const
   PalCol : array[1..5] of Byte = (0,30,40,50,60);
 
 var
-  { [re] DGROUP 0x328. DeltaPal's `lea si,t` points at its first byte. It is
-    zero-based but indexed from 1 everywhere, which puts T[1] at 0x32b. }
-  T : array[0..255] of RGBt;
-  { [re] DGROUP 0x320, named by BARS.INC's rotpal. 1000:11ce zeroes it. }
+  { [re] DECLARATION ORDER IS THE ORIGINAL'S DGROUP ORDER, read straight off
+    the addresses in the binary. Turbo Pascal allocates globals in the order
+    they are declared, so this list IS the layout:
+
+      031c Count, Count2, Count3   031f pad     0320 GlobCount
+      0322 Fading   0323 Bright    0324 Value, Value2, Value3   0327 pad
+      0328 T (768)                 0628 Font    062c ScnPos
+      062e ScrollDone  062f Glyph  0630 Width   0632 ScrollX
+      0634 Text (480)              0814 Loop    0816 LineWidth (ModeX's)
+
+    Getting this wrong costs nothing visible and everything measurable: the
+    code is identical either way and every instruction that names a global
+    carries a different displacement, so a correct routine reads as wrong. }
+  Count, Count2, Count3 : Byte;
   GlobCount : Word;
-  { [re] DGROUP 0x62c. gotoscnpos adds 0xbb80 and hands the sum to the CRTC
-    start address. Name is ours; BARS.INC does not declare it. }
-  ScnPos : Word;
-  { [re] Set by Drawit and read by PlayPal. Declared here because BARS.INC
-    references them without declaring them, so they lived in the enclosing
-    program. Types are a first reading and the build is what tests them. }
-  { [re] BYTES, not Integers -- 1000:013d..015b sets all six with
-    `mov byte ptr`. Value..Value3 are 0x324..0x326 and Count..Count3 are
-    0x31c..0x31e, which are exactly the addresses PlayPal at 064b reads:
-    the Count trio nine times each and the Value trio three times each.
-    Value..Value3 are SIGNED: PlayPal does `Value2 := -1`, and Byte refused
-    to compile it. ShortInt is one byte too, so the store is the same. }
-  { [re] DGROUP 0x322 and 0x323. Main sets Fading := 0 at 1000:11c9 and
-    Bright := 0x3f at 11d3 -- 63, the top of a VGA DAC component. ClampDown
-    below runs only while Fading = 1 and decrements Bright each pass, so the
-    pair is a fade-out driven through the palette buffer. Names are ours. }
   Fading : Byte;
   Bright : Byte;
-  { [re] The scroller's state. 0x62e is set to 1 when a glyph runs out, 0x62f
-    is the character being scrolled in, 0x630 its width and 0x632 how far into
-    it the scroll has reached. Names are ours. }
-  { [re] DGROUP 0x634. Main fills it in six blocks of 80 from the initialised
-    text at 0xee onwards. The loop reads 420 characters before wrapping. }
-  Text       : array[1..480] of Char;
-  { [re] DGROUP 0x814. Main's copy loops use a GLOBAL counter, not a local --
-    the stores are `mov [0x814],ax` rather than a frame slot. }
-  Loop       : Word;
-  ScrollDone : Byte;
-  Glyph      : Byte;
-  Width      : Word;
-  ScrollX    : Word;
-
-  { [re] DGROUP 0x628, a FAR POINTER. 11a6:023f takes one word, calls the
-    heap allocator and raises runtime error 203 -- heap overflow -- so it is
-    the New helper: the compiler passes SizeOf and assigns the result. }
-  Font : ^TFont;
   Value, Value2, Value3 : ShortInt;
-  Count, Count2, Count3 : Byte;
+  T : array[0..255] of RGBt;
+  Font : ^TFont;
+  ScnPos : Word;
+  ScrollDone : Byte;
+  Glyph : Byte;
+  Width : Word;
+  ScrollX : Word;
+  Text : array[1..480] of Char;
+  Loop : Word;
 
 { [re] 1000:0000, 14 bytes. Called NEAR by DeltaPal -- `e8` with no `push cs`
   at 1000:002e -- so it is local, not far. BARS.INC calls it but does not
