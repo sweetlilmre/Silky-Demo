@@ -29,7 +29,7 @@
 |---|---|
 | `rep outsb` | `lodsb` / `out dx,al` / `loop` |
 
-Equivalent in effect, different in bytes. **So the source we hold is not the source this binary was built from** — it is a variant of it. Which came first is not settled here; a `rep outsb` to the DAC was known to be too fast for some cards, so either direction is a plausible edit.
+Equivalent in effect, different in bytes. **So the source we hold is not the source this binary was built from** — it is a variant of it, and this is one of three places where the two disagree; [04-palette-animation.md](04-palette-animation.md) lists them all. Which came first is not settled here; a `rep outsb` to the DAC was known to be too fast for some cards, so either direction is a plausible edit.
 
 The include also gives a name to a variable: `lea si,t` in the source is `lea si,[0x328]` in the binary, so **DGROUP `0x328` is `t`**, the 768-byte palette buffer. That is one original identifier recovered, and it did not come from reading bytes.
 
@@ -72,12 +72,12 @@ The shared group is the file-I/O family, and each is now named: **`0822` Assign,
 11d3  [0x323] = 0x3f     63, the top of a VGA DAC component
 11d8  [0x816] = 0xa0     160 -- the Mode X line width
 11dd  lcall 112f:0043    set the unchained mode, which reads [0x816]
-11e2  call 10c4
-11e5  call 10df
+11e2  call 10c4          WhiteOut -- the whole palette to white
+11e5  call 10df          FadeOut -- sixty-four passes down to black
 11e8  call 10a1          split the screen at scanline 100
-11eb  call 0cb1
+11eb  call 0cb1          ShowFont -- draw every glyph into video memory
 11ee  call 0b30          load Check2.Cel
-11f1  call 0052          load scroll.col
+11f1  call 0052          Drawit -- load scroll.col and draw the bars
 11f4  call 0bf4          load Asphyx.Cel
       ... two copy loops into [di+0x633] ...
 12e0  call 1194          the scrolltext, then text mode

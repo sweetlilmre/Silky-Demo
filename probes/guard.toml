@@ -39,6 +39,14 @@ switches = "/$G+ /$S+ /GD /Q"
 dialect  = "tp6"
 switches = "/$G+ /$S+ /GD /Q"
 
+# TURBO PASCAL 7 CANNOT HAVE BUILT THE ORIGINAL -- the runtime's banner says
+# 1990 -- and it is declared here anyway, because the question is whether any
+# Borland compiler on this machine emits the seven-byte guard. An answer of
+# yes puts the difference in the code generator; no puts it back in the source.
+[compiler.tp7]
+dialect  = "tp7"
+switches = "/$G+ /$S+ /GD /Q"
+
 [assembler]
 flags = "/la /m2"
 

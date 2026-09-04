@@ -29,6 +29,22 @@
   other across the whole 2726-byte run, so the two patch levels installed here
   agree -- and neither emits this.
 
+  A THIRD COMPILER, AND IT AGREES. Turbo Pascal 7.01 cannot have built the
+  original -- the runtime's banner says 1990 -- but it was run against this
+  same probe to ask whether ANY Borland compiler here emits the long form. It
+  does not: all three of its guards come out `80 3e xx xx 01 / 74 03 /
+  e9 9a 00`, the compact five, with the original's own near displacement. So
+  three compilers spanning two major versions agree with each other and
+  disagree with the original.
+
+  WHAT THE SEVEN BYTES LOOK LIKE. `jne` onto a near jump, with a short jump
+  inserted to hop over it, is a fixup pattern: a compiler that emits a short
+  branch first and, on finding it out of range, patches it into a jump to a
+  near jump rather than re-sizing the branch. Every compiler here sizes the
+  branch correctly the first time. That is a difference in the code generator,
+  not in the statement being compiled -- which is consistent with sixteen
+  source constructs failing to move it.
+
   THE SURVIVING HYPOTHESIS is therefore the compiler rather than the source:
   the original may have been built with a TP6 patch level that is neither
   TP600 nor TP601. That is checkable by anyone holding another TP6, which is
