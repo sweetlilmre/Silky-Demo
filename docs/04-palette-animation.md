@@ -75,12 +75,26 @@ The 3-byte save and restore counts in `015d` and `01ff` were not recovered by th
 | `015d` | rotate the whole range forward | `RotPal2` |
 | `01ff` | rotate the whole range backward | `RotPal3` |
 | `05f1` | the dispatcher | `rotpal` |
-| `064b` | the palette builder | `StartPal` |
+| `064b` | the palette builder | `PlayPal` |
+| `095e` | the palette ramp | `StartPal` |
+| `000e` | SetStartAddress | `gotoscnpos` |
+| `[0x2d4]` | the ramp parameters | `PalCol`, `array[1..5] of Byte` |
 | `[0x320]` | the phase counter | `GlobCount` |
 | `[0x328]` | the palette buffer | `T`, an `array[0..255] of RGBt` |
 
 The source confirms each measured number: `15*3` is the 45-byte band shift, `336` is the whole-range move, the bands are 16 colours, there are eight of them, and the `case` arms are `1..200`, `201..320`, `321..520`, `521..640` with the wrap at 640 — dispatching `rotpal0`, `rotpal2`, `rotpal1`, `rotpal3` in that order, which is exactly the order the call sites gave.
 
 **The array is 0-based and used 1-based.** `T` sits at `0x328` and the code indexes `T[1]` upward, so `T[1]` is `0x32b` and `T[16]` is `0x358` — which is why the measured band addresses came out at `t+3` and `t+48`. `DeltaPal`'s `lea si,t` is `0x328`, the whole 256-colour buffer.
+
+### A name I got wrong, corrected
+
+The first version of this table said `064b` was `StartPal`. It is **`PlayPal`**, and `StartPal` is `095e`. The evidence is in both directions and I had already measured both halves without joining them up:
+
+* `PlayPal` writes `T[150+Loop+count]`, and `064b` contains `add ax, 0x96` — 150.
+* `StartPal` opens `gotoscnpos; FillChar(palcol,SizeOf(palcol),0)`, and `095e` opens `call 000e` then `FillChar(ds:0x2d4, 5, 0)`. So `PalCol` is five bytes at `0x2d4` and `000e` is `gotoscnpos`.
+* `StartPal`'s loop is `repeat playpal; rotpal; deltapal; inc(Count); if Count > 15 then` — and `095e` is `call 064b; call 05f1; call 002b; inc [bp-6]; cmp [bp-6],0x0f; jbe`.
+* `if palcol[2] < 30 then inc(palcol[2],1) else palcol[2] := 30` is `cmp byte [0x2d5],0x1e / jae / inc / mov [0x2d5],0x1e`, and 30 is `0x1e`. The `palcol[3]` arm is 40, which is `0x28`, incremented by 2.
+
+The descriptions in [05-routines.md](05-routines.md) were right — `064b` builds and `095e` ramps. Only the two names were swapped, in the commit that introduced them.
 
 **This does not make `BARS.INC` ground truth.** Its `DeltaPal` still does not match the binary — see `barsinc-differs-from-binary`. What it is now is a set of testable hypotheses: with the toolchain proven and `MODEX` rebuilt byte-identically, each routine it contains can be compiled and compared, and the byte comparison decides whether that routine is the one this binary was built from.

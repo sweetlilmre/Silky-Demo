@@ -48,6 +48,7 @@ flags = "/la /m2"
 mode = "declared"
 list = [
   "MODEX.PAS",    # 112f  the Mode X unit -- PutPixel, SetModeX, SetPlane
+  "SILKY.PAS",    # 1000  the program
 ]
 
 [stage]
