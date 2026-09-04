@@ -1,0 +1,83 @@
+# Where this project keeps things. Read by every instrument in kit/.
+# Proposed by kit/tools/wizard.py; the judgements below are recorded beside
+# each key, because the wizard refuses to guess them.
+#
+# The target is SILKY.EXE, the 1993 Asphyxia demo by Denthor. Its runtime
+# banner reads "Portions Copyright (c) 1983,90 Borland", which is the Turbo
+# Pascal 6.0 runtime -- so the tp6_far source rewrite is the one this target
+# will want when the units config arrives.
+
+[layout]
+# The sources we are WRITING. Created empty; the wizard ran in NEW mode and
+# proposed nothing, because there is no script here for it to read a role out
+# of. bin/BARS.INC is ORIGINAL Turbo Pascal source that shipped with the demo
+# -- 4691 bytes of {$I} include holding `Procedure DeltaPal; assembler;` -- so
+# it is a build INPUT and evidence, not something we are reconstructing. It
+# stays in bin/ with the rest of the distribution until a decision is written
+# down about where original source belongs.
+src      = "src"
+wiki     = "kit/wiki"
+register = "status.toml"
+
+# This project keeps a stripped copy, so apparatus comments carry a [re] tag
+# written in the same keystroke as the comment (WORKING.md section 2a) and
+# tagcheck.py is on the session check list. Decided while src/ is still empty,
+# which is the cheapest this decision ever is: left later, the same judgement
+# has to be re-derived one paragraph at a time, and more than half of it
+# carries no mechanical tell for any instrument to find.
+tagged   = true
+
+# shared_asm.py --gate is on the session check list and exits 2 without this.
+exempt   = "src/asm/shared-exempt.txt"
+
+# Where the DOSBox build stages and leaves its output. One directory for both,
+# as both sibling consumers do: the compiler writes beside what it staged.
+build    = "build"
+built    = "build"
+
+# Which files in `built` are OURS. EXPLICIT, not a glob. A glob that matched a
+# copy of the original would make a compare tool measure an original against
+# itself AND PASS -- SETUP.md names this as the reason there is no default.
+#
+# WATCH THIS ONE. Our build leaves SILKY.EXE and the original is ALSO called
+# SILKY.EXE; only the directory separates them, where both siblings had
+# different names as well. Nothing may ever copy bin/SILKY.EXE into build/.
+built_pattern = ["SILKY.EXE"]
+
+# probecheck.py re-runs these; a probe is cited the way a binary is -- by a
+# resolved investigation and by source comments -- and nothing else in the
+# tree recompiles one, so a probe that has quietly stopped yielding a
+# measurement turns every citation of it back into an assertion.
+probes   = "probes"
+
+[target]
+# The paragraph the Ghidra disassembly calls the start of the load image. Read
+# off the memory map of ghidra/SilkyDemo.gpr program SILKY.EXE, whose lowest
+# block is CODE_0 at 1000:0000 -- not guessed, and not the MZ header's own
+# CS:IP, which is 0000:119e. The full block list at import was CODE_0 1000,
+# CODE_1 112f, CODE_2 113c, CODE_3 1144, CODE_4 11a6, CODE_5 1247, and DATA
+# from 1247:0320.
+first_para = 0x1000
+
+# One image, so a one-row table. Measured in place: this demo shipped as a
+# handful of loose files rather than an archive to unpack, so bin/SILKY.EXE IS
+# the distribution copy and there is no separate ref/ tree to keep in step.
+[target.original]
+"000" = "bin/SILKY.EXE"
+
+# The RELEASE, part-keyed like the original above. This target shipped ONE
+# image and there is no separate released variant, so the two answers are the
+# same file -- said out loud rather than left unanswered, because a tool that
+# reads this key is asking "which binary did they ship" and the honest answer
+# here is "the same one we are rebuilding".
+[target.release]
+"000" = "bin/SILKY.EXE"
+
+[encaudit]
+# encaudit.py finds text I/O that leans on the locale encoding, which on
+# Windows is cp1252 -- and the kit's own docstring records that mojibaking two
+# documents and producing two false comparisons was not theoretical. This host
+# has no Python of its own yet, so the audit is pointed at the tools it
+# actually runs. Add this repo's own directory here the moment it grows a
+# script.
+dirs = ["kit/tools"]

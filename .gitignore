@@ -1,0 +1,32 @@
+.claude
+.mcp.json
+.venv
+build/
+work/
+
+# Machine paths. Never committed -- kit.toml's committed half says WHERE things
+# are, this says where they are ON THIS MACHINE.
+kit.local.toml
+
+# Ghidra's project is an instrument's WORKING STATE, not the record. 2.7M
+# across 15 files here, and every byte of it is derived from bin/SILKY.EXE plus
+# the loader's defaults -- the database was created on 4 Sep 2026 by importing
+# that one file, and no human knowledge has been put into it yet. It is also
+# locked and mutating while Ghidra is open, so a commit of it is a snapshot of
+# a moving file. What Ghidra has told us so far is in kit.toml as text: the
+# block list, and first_para read off the memory map.
+ghidra/
+
+# codegen.py writes each probe compile here. Derived, and it changes on every
+# run -- a .TPU also embeds a timestamp, so it never compares equal.
+probes/out/
+
+# The watched-run staging area. Everything in it is copied from bin/ and
+# build/, and a DOSBox config is generated because it carries a machine path.
+run/
+
+# Scratch. One-off instruments and their outputs: a script that answers a
+# question about THIS target once is not part of the method, so it belongs in
+# neither src/ nor kit/ -- WORKING.md's closing-an-iteration test. Anything
+# here that turns out to matter gets moved into the record as prose.
+temp/
