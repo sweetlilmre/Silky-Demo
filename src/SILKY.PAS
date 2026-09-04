@@ -310,24 +310,36 @@ end;
   black. It works on the buffer; DeltaPal is what reaches the hardware.
   Does nothing at all unless Fading has been set.
 
+  THE GUARD IS WRITTEN WITH TWO GOTOS AND IT HAS TO BE. Written as a plain
+  `if Fading = 1 then begin ... end` the compiler owns both sides of the
+  branch, inverts the test and falls through into the body, which is two
+  bytes shorter than what the original has. A positive test that jumps INTO
+  the body, with an unconditional jump past it, is the only shape that emits
+  the original's seven bytes -- and it is what the authors, who wrote most of
+  this demo in inline assembler, would think in. Tidying it into an `if`
+  moves every byte after it.
+
   [re] 1000:09fb, 191 bytes. Frames 2 bytes for a byte counter. Runs the whole
   256-entry palette and clips every channel to Bright, then lowers Bright by
   one -- so repeated calls walk the picture down to black without touching the
   DAC directly, since DeltaPal is what uploads T. }
 procedure ClampDown;
+label
+  Body, Done;
 var
   Loop : Byte;
 begin
-  if Fading = 1 then
+  if Fading = 1 then goto Body;
+  goto Done;
+Body:
+  for Loop := 0 to 255 do
   begin
-    for Loop := 0 to 255 do
-    begin
-      if T[Loop].r > Bright then T[Loop].r := Bright;
-      if T[Loop].g > Bright then T[Loop].g := Bright;
-      if T[Loop].b > Bright then T[Loop].b := Bright;
-    end;
-    Dec(Bright);
+    if T[Loop].r > Bright then T[Loop].r := Bright;
+    if T[Loop].g > Bright then T[Loop].g := Bright;
+    if T[Loop].b > Bright then T[Loop].b := Bright;
   end;
+  Dec(Bright);
+Done:
 end;
 
 

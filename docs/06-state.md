@@ -6,26 +6,19 @@
 
 | instrument | what it says |
 |---|---|
-| `blockcmp blocks/1000.toml` | 28 of 29 blocks agree; **4848 of 4848 bytes** of segment `1000` transcribed |
+| `blockcmp blocks/1000.toml` | **29 of 29 blocks agree**; 4848 of 4848 bytes of segment `1000` transcribed |
 | `mapcmp link.toml` | **5 units exact** — SILKY 4848, MODEX 208, PALETTE 128, Crt 1568, System 2576 |
 | `units.toml` | MODEX and PALETTE **identical**, but for pending fixups |
 | `dgimage link.toml` | the 800-byte initialised data group **identical** |
 | `routines.py` | **11 of 11 locked**, 0 holes, 0 failing |
-| MZ header | `minalloc` 2317 = 2317, `ss` 1926 = 1926 |
+| MZ header | `minalloc` 2317 = 2317, `ss` 1926 = 1926, `ip` equal |
+| the whole file | **10,704 bytes, 0 differ** |
 
-Compared straight, byte for byte:
+Compared straight, byte for byte: **0 differ, over all 10,704 bytes.** Header, relocation table, all five segments and the data group.
 
-```
-SILKY 0x0000..0x0a0e                                   0 differ
-everything from 0x12f0 on                              0 differ
-   — MODEX, PALETTE, Crt, System, and the data group
-SILKY 0x0a15..0x12f0, ours shifted by two             12 differ
-header, outside the relocation table                   1 differs — 0x14, which is ip
-```
+## The last two bytes, and how they were found
 
-## Everything that differs traces to two bytes
-
-`ClampDown` at `1000:09fb` guards its body in seven bytes where our build emits five:
+For a long stretch this section recorded a two-byte shortfall in one routine. `ClampDown` guards its body in seven bytes where every build of ours emitted five:
 
 ```
 80 3e 22 03 01   cmp byte ptr [Fading], 1
@@ -34,15 +27,21 @@ eb 03            jmp  +3      -> over it, into the body
 e9 9a 00         jmp  near epilogue
 ```
 
-Its **body** is right — 156 bytes with nothing unexplained, and the near displacement `9a 00` is the original's, so the length is right as well as the content. The two-byte shortfall then accounts for the rest: the twelve later bytes are three `mov di,imm16` loading the CS-relative addresses of the `gold.Fnt`, `Check2.Cel` and `Asphyx.Cel` literals, and nine `e8` near-call displacements that cross the boundary. `ip` moves with it. So does every relocation-table entry above it.
+Sixteen spellings of `if Fading = 1 then` were put through the real compiler and every one inverted the test and fell through into the body — `cmp / je +3 / jmp near`, five bytes, carrying the original's own near displacement. Turbo Pascal 7.01 was tried as well, and inline assembler jumping to a Pascal label, and both did the same. From that this project concluded the difference was in the **code generator**, and hypothesised a TP6 patch level nobody here holds.
 
-**Sixteen source constructs have been put through the real compiler and none emits those seven bytes.** `probes/GUARD.PAS` lists them. The mechanism is understood: with a body under 127 bytes `if Flag = 1 then` emits a single short `jne` — the original's polarity — and at ClampDown's real 156 bytes the identical construct emits the compact five. `{$B+}` changes nothing, and TP600 and TP601 are byte-identical to each other across the whole run. Turbo Pascal 7.01 was then run against the same probe — not because it could have built a 1990 binary, but to ask whether any Borland compiler here emits the long form. It does not: its guards are the same compact five, carrying the original's own near displacement. Three compilers across two major versions agree with each other and disagree with the original.
+**That was wrong, and the author of the demo said so.** The demo was written with Turbo Pascal and inline assembler and nothing more exotic; there was no unusual toolchain. Which meant the difference had to be in the source, and the thing to look at was the one feature no `if` had reproduced: the original keeps the **polarity** of the test. It jumps `jne` away and reaches the body by a short jump, so the false jump and the true jump were emitted as a pair and never folded. A compiler folds them because it owns both sides of the branch. It cannot fold them if the source asked for both:
 
-What the seven bytes look like is a fixup rather than a statement. A `jne` onto a near jump, with a short jump inserted to hop over it, is what a code generator produces when it emits a short branch first and, finding it out of range, patches it into a branch to a near jump instead of re-sizing it. Every compiler here sizes the branch correctly on the first pass. That the difference sits in the code generator rather than in the statement is exactly what sixteen source constructs failing to move it would predict.
+```pascal
+  if Fading = 1 then goto Body;
+  goto Done;
+Body:
+  ...
+Done:
+```
 
-**And it is a caution about a tell the kit teaches.** `instruction-the-compiler-never-emits` reads "invert the test and jump over an unconditional jump" as the mark of a person writing assembler by hand, because a compiler expands a long branch its own way. Here that same shape sits in code that is demonstrably compiled: `ClampDown`'s body comes out of Pascal byte for byte, near displacement included, and only the branch in front of it differs. So the shape is evidence of a code generator this project has not got, and not, on its own, evidence of a hand.
+That emits the seven bytes exactly, near displacement included, and with it the file goes byte-identical. It is also the shape a person who thinks in assembler writes, which is what the authors were.
 
-The surviving hypothesis is therefore **the compiler, not the source**: a TP6 patch level that is neither of the two installed here. Anyone holding another TP6 can settle it in one build.
+**What the error was worth correcting.** A negative result across sixteen constructs and three compilers is strong evidence, and it was read as evidence for the wrong thing: "no source construct does this" was taken to mean the compiler differed, when it meant the constructs were all the same *kind* of construct. Sixteen ways of writing an `if` are one experiment, not sixteen. The distinguishing feature — the polarity — was in the bytes the whole time and named in this document, and it was treated as a curiosity rather than as the thing to reproduce.
 
 ## Three things that had to be right before any of this could be measured
 
@@ -71,6 +70,6 @@ The observation is **about this build**. It stores the commit and a fingerprint 
 
 ## So where it stands
 
-The structural strand is one compiler construct short of byte-identity. The behavioural strand is at **R3**: two binaries, watched side by side, no visible difference.
+The structural strand is **complete**: the rebuild is the original, byte for byte, all 10,704 of them. The behavioural strand is at **R3**: two binaries, watched side by side, no visible difference.
 
 Neither settles the other. A demo can look right and differ in bytes, and byte-identity was never going to prove the screen. Both are now measured.

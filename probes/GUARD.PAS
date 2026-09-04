@@ -1,5 +1,15 @@
 {$G+}
-{ WHAT THIS PROBE MEASURES, and it is a NEGATIVE result.
+{ SOLVED -- SEE probes/BASMG.PAS. This probe's negative result was real and
+  its conclusion was wrong. Sixteen spellings of `if Fading = 1 then` all
+  emit the compact five bytes, and from that this file concluded the
+  difference was in the CODE GENERATOR. It was in the source: the original's
+  guard keeps the polarity of its test, which an `if` never needs to do and
+  which `if Fading = 1 then goto Body; goto Done;` does exactly. Sixteen ways
+  of writing one construct are one experiment, not sixteen. Kept because the
+  negative result is still true and still useful, and because the wrong
+  inference is worth being able to find again.
+
+  WHAT THIS PROBE MEASURES, and it is a NEGATIVE result.
 
   1000:09fb guards its body with SEVEN bytes:
 

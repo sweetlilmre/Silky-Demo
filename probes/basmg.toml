@@ -1,0 +1,70 @@
+# How SILKY is built. Read by build.py, which stages the sources under 8.3
+# names, drives a real Turbo Pascal inside DOSBox-X and reads the log back.
+#
+# NO MACHINE PATHS. DOSBox-X, the drive C: image and each compiler's location
+# are answered by kit.local.toml, which is not committed.
+
+src      = "probes"
+build    = "probes/out"
+wipe_tpu = true
+title    = "Silky build"
+drive    = "D"
+log      = "BUILD.LOG"
+timeout  = 180
+lint     = "kit/tools/pascal/paslint.py"
+
+[compiler]
+default = "tp6"
+
+# TURBO PASCAL 6, and the image says so: `Portions Copyright (c) 1983,90
+# Borland` at 11a6:0219. WHICH PATCH LEVEL IS NOT SETTLED -- TP600 (23 Oct
+# 1990) and TP601 (11 Jun 1991) are both installed and both declared, so the
+# question can be measured rather than argued.
+[compiler.tp6]
+dialect  = "tp6"
+# THE SWITCH LINE IS MEASURED OFF THE ORIGINAL, not copied from a sibling.
+#
+# $G+ is REQUIRED. The image contains `6a 03` (PUSH imm8) at 112f:00b9 and
+# `c1 e0 04` (SHL r/m,imm8) at 1000:0d3c. Neither instruction exists on an
+# 8086; both are 80186 and later, so 286 code generation was on.
+#
+# $S+ is REQUIRED and it is the default anyway. EVERY framed routine in this
+# image opens by loading AX with its locals size and far-calling 11a6:04df --
+# 112f:0000 does `xor ax,ax` then the call, 113c:0000 does `mov ax,6` first.
+# That call IS the stack check, so getting this wrong would put a seven-byte
+# difference at the head of every routine we transcribe.
+switches = "/$G+ /$S+ /GD /Q"
+
+[compiler.tp61]
+dialect  = "tp6"
+switches = "/$G+ /$S+ /GD /Q"
+
+# TURBO PASCAL 7 CANNOT HAVE BUILT THE ORIGINAL -- the runtime's banner says
+# 1990 -- and it is declared here anyway, because the question is whether any
+# Borland compiler on this machine emits the seven-byte guard. An answer of
+# yes puts the difference in the code generator; no puts it back in the source.
+[compiler.tp7]
+dialect  = "tp7"
+switches = "/$G+ /$S+ /GD /Q"
+
+[assembler]
+flags = "/la /m2"
+
+[order]
+# DECLARED, not derived, because the link order decides the segment addresses
+# and those are the thing being measured. A unit must precede whatever uses it.
+mode = "declared"
+list = [
+  "BASMG.PAS",
+]
+
+[stage]
+encoding = "cp437"
+# BARS.INC is not a compilation target -- it is {$I}-included by SILKY.PAS --
+# so it never appears in [order].list and would not be staged without this.
+# The compiler answered `Error 15: File not found (BARS.INC)` until it was.
+alongside = []
+
+[names]
+
+[install]

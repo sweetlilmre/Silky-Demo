@@ -6,14 +6,24 @@
 
 | measurement | instrument | result |
 |---|---|---|
-| the program, segment `1000` | `blockcmp` | 4848 of 4848 bytes transcribed, 28 of 29 blocks byte-identical |
+| **the whole file** | direct | **10,704 bytes, 0 differ** |
+| the program, segment `1000` | `blockcmp` | 4848 of 4848 bytes, 29 of 29 blocks byte-identical |
 | the two units | `mapcmp` | `MODEX` 202/202 and `PALETTE` 124/124, both exact |
 | the initialised data | `dgimage` | 800 bytes, identical |
 | the runtime, `Crt` and `System` | `mapcmp` | exact, and not ours to write |
-| the file | direct | 10,704 bytes, `minalloc` and `ss` both equal |
 | running it | `observe` | R3, part `SILKY`, matches against the original |
 
-**What is not identical.** One routine's guard clause. Where the reconstruction's `ClampDown` compiles a five-byte test, the original has seven, and every attempt to reproduce the longer form -- sixteen of them, kept in `probes/GUARD.PAS` -- has failed on both Turbo Pascal 6.0 patch levels installed here. The two extra bytes shift the middle of segment `1000` along, which accounts for the twelve differing bytes in the load image, the entry `ip` in the header, and the relocation entries that point past the shift. Nothing else in 10,704 bytes differs.
+The rebuild is the original: header, relocation table, all five segments and the data group.
+
+The last two bytes took the longest and are worth recording. `ClampDown`'s guard is seven bytes where a plain `if Fading = 1 then` compiles to five, and sixteen spellings of that `if`, across three compilers, all produced the five. The mistake was to read that as a difference in the code generator; it was a difference in the source. The original keeps the polarity of its test -- it jumps away on `jne` and reaches its body by a short jump, which a compiler never needs to do and a source asking for both jumps does:
+
+```pascal
+  if Fading = 1 then goto Body;
+  goto Done;
+Body:
+  ...
+Done:
+```
 
 ## The two copies of the source
 
