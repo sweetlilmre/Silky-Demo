@@ -1,0 +1,123 @@
+# SILKY's LAYOUT: which segments the load image holds, and where the data
+# group starts. Read by mapcmp, linkorder, linkbytes, dgroup, coverage and
+# segdoc. One table per part; SILKY is one program, so it is a table with one
+# row -- SETUP.md is explicit that a single-target project is not a special
+# case with its own keys.
+#
+# WHERE THESE ADDRESSES CAME FROM, and it is not a linker map: src/ is empty,
+# so nothing has been built and there is no map to read. They are the paragraphs
+# named by the MZ relocation table -- 136 fixups naming five distinct targets,
+# 112f 113c 1144 11a6 1247, plus 1000 as the load base -- and the same six
+# Ghidra derives its CODE_n blocks from, which is why the two agree here. That
+# agreement is NOT independent confirmation: it is one measurement read twice.
+#
+# The arithmetic does close twice over, and that part is independent. Every
+# segment's extent is the next one's base, the chain ends at paragraph 1279,
+# and (1279 - 1000) * 16 = 10128 bytes -- which is the load image size computed
+# from the MZ header's own page count, by a different route.
+#
+# THE BLIND SPOT IS A UNIT NO FIXUP NAMES. A segment base only appears above if
+# something refers to it across a segment boundary, so a unit that is never
+# entered from outside its own segment is invisible to this method and would sit
+# inside its neighbour's extent, silently. A linker map is what will settle it,
+# and until there is one, a "segment" here is a paragraph something far-refers
+# to and nothing stronger.
+
+layout = "docs/00-map.md"    # the segment/size document coverage measures
+                             # against; segdoc.py generates one
+
+[lists]
+# The runtime's units -- NOT ours to transcribe.
+#
+# System is named by its own banner: 11a6 carries "Runtime error " and
+# "Portions Copyright (c) 1983,90 Borland", which is the Turbo Pascal 6.0
+# runtime, and survey.py finds it calling OUT to nothing at all -- everything
+# depends on it and it depends on nobody, which is what a runtime looks like.
+#
+# Crt is named by COMPARISON against the sibling consumer, which identified its
+# own 1193 from the instructions (a `mov ah,0x0f; int 10h` init, two text-file
+# records handed to an RTL routine, and a Crt.Window whose four parameters
+# validate against WindMin/WindMax). Our 1144 is 1568 bytes and so is that one.
+# Compared byte for byte they differ in 149 places, and the differences are not
+# scattered: 73 of 76 differing runs are exactly one word wide and EVERY one of
+# those 73 carries the identical delta of +0x163e, which is one constant DGROUP
+# shift -- the same code with its variables at a different base. The three runs
+# that are not a clean word are the relocated segment bytes, a6 against f5
+# (our System at 11a6, theirs at 11f5) and 47 against eb (our DGROUP at 1247,
+# theirs at 12eb). One shared unit linked into two programs, measured rather
+# than recognised.
+rtl   = ["System", "Crt"]
+noseg = []
+
+[unitname]
+# source name -> linker-map name, where they differ. EMPTY: nothing is
+# abbreviated yet because nothing has been named yet. An entry here would be a
+# decision about a map that does not exist.
+
+[part."000"]
+# THE MAP DOES NOT EXIST YET and this names where it will be. src/ holds no
+# SILKY.PAS, so nothing has produced a SILKY.MAP. Any instrument reading this
+# key fails until there is a program to build -- a to-do, not a silence.
+exe        = "SILKY.EXE"
+map        = "build/SILKY.MAP"
+main_unit  = "SILKY"         # THIS RECONSTRUCTION'S choice of name. The
+                             # original's program name is not recoverable from
+                             # the image; the linker map will say what we
+                             # called it, which is not the same thing as what
+                             # they called it.
+program_seg = 0x1000         # NAMED, never taken as segments[0]: position
+                             # means "the program" only by coincidence of
+                             # link order. Here it is evidenced -- the MZ
+                             # header's CS:IP is 0000:119e, which lands at
+                             # offset 0x119e inside this segment, and the
+                             # instruction there calls 11a6:0000, the runtime's
+                             # init. That is a program's entry, not a unit's.
+
+# end_at AND dgroup_at ARE TWO FACTS, and here they are equal because the
+# segment list below INCLUDES the runtime -- System is in it, so the walk and
+# the data group meet at the same paragraph.
+#
+# BOTH ARE 1247, NOT 1279, and the difference is the whole reading of the tail.
+# Ghidra draws a block it calls CODE_5 at 1247:0000..031f because four fixups
+# name paragraph 1247, and those four are references TO the data group rather
+# than code inside it. survey.py settles it: 800 bytes holding ZERO far returns
+# and one printable string, which is the demo's entire scroll text -- "HAPPY
+# BIRTHDAY SILKY ... A S P H Y X I A   R U L Z". Data, read as code by a
+# disassembler that had only the fixups to go on.
+end_at     = 0x1247
+dgroup_at  = 0x1247
+
+# ASCENDING AND COMPLETE, because each segment's extent is the NEXT entry's
+# base -- which is why there is no length column. Two are named on evidence and
+# two are not; the unnamed pair is open in the register, and a linker map is
+# what will settle them.
+segments = [
+  { segment = 0x1000, name = "SILKY" },     # the program, 4848 bytes. Names
+                                            # the four data files the demo
+                                            # loads -- scroll.col, gold.Fnt,
+                                            # Check2.Cel, Asphyx.Cel -- all
+                                            # four of which are in bin/. No
+                                            # framed far return in 4848 bytes,
+                                            # which is right: a program body
+                                            # ends in the runtime's halt.
+  { segment = 0x112f, name = "UNIT112F" },  # 208 bytes. UNIDENTIFIED, and the
+                                            # name is a placeholder that says
+                                            # so. Called from the program at
+                                            # nine sites through 112f:0000,
+                                            # once through 112f:0043; calls out
+                                            # only to System.
+  { segment = 0x113c, name = "UNIT113C" },  # 128 bytes. UNIDENTIFIED. Entered
+                                            # at 113c:0045 and 113c:0067, and
+                                            # it holds the load image's only
+                                            # virtual call site, a
+                                            # CALLF [DI+cb] at 113c:0079 --
+                                            # so something here is an object
+                                            # with a VMT.
+  { segment = 0x1144, name = "Crt" },       # 1568 bytes. The RTL's, see
+                                            # [lists].rtl for the measurement.
+  { segment = 0x11a6, name = "System" },    # 2576 bytes. The runtime; see
+                                            # [lists].rtl.
+]
+
+# NOT A CODE SEGMENT -- see the note on dgroup_at above.
+data = [ { segment = 0x1247, why = "the scroll text and DGROUP's initialised head, 800 bytes, and the last thing in the file" } ]

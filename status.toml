@@ -4,3 +4,13 @@
 # `matched`, `achieved` and every [observation.*] are MEASURED. Never
 # hand-edit them. To accept a regression, lower `target` with a `reason`.
 # [plan] is DECIDED: investigation order is the priority order.
+
+[[plan.investigation]]
+name = "unidentified-units-112f-113c"
+finding = "Two code segments have no name. 112f is 208 bytes, called from the program at nine sites through 112f:0000 and once through 112f:0043, and calls out only to System. 113c is 128 bytes, entered at 113c:0045 and 113c:0067, and holds the load images only virtual call site, a CALLF [DI+cb] at 113c:0079, so something in it is an object with a VMT. Both were located from the MZ relocation table rather than a linker map, so their extents are sound but their identities are unread. Crt at 1144 was settled by comparing it byte for byte against the sibling targets Crt; the same comparison against other Turbo Pascal 6.0 binaries is the cheapest next attempt for these two."
+state = "open"
+
+[[plan.investigation]]
+name = "no-linker-map-yet"
+finding = "Every address in link.toml comes from the MZ relocation table, and the blind spot is a unit no fixup names: a segment base only appears there if something refers to it across a segment boundary, so a unit never entered from outside its own segment sits inside its neighbours extent with nothing reporting it. A linker map is what settles it. This closes when src/ holds a program that builds and build/SILKY.MAP exists, at which point link.toml segments and the map segment table can be compared."
+state = "open"
