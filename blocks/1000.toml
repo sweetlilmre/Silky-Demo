@@ -121,3 +121,8 @@ to   = 0x0cb1
 name = "ShowFont"
 from = 0x0cb1
 to   = 0x0f6d
+
+[[block]]
+name = "Scroll"
+from = 0x0f6d
+to   = 0x101c

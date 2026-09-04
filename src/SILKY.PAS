@@ -50,6 +50,14 @@ var
     pair is a fade-out driven through the palette buffer. Names are ours. }
   Fading : Byte;
   Bright : Byte;
+  { [re] The scroller's state. 0x62e is set to 1 when a glyph runs out, 0x62f
+    is the character being scrolled in, 0x630 its width and 0x632 how far into
+    it the scroll has reached. Names are ours. }
+  ScrollDone : Byte;
+  Glyph      : Byte;
+  Width      : Word;
+  ScrollX    : Word;
+
   { [re] DGROUP 0x628, a FAR POINTER. 11a6:023f takes one word, calls the
     heap allocator and raises runtime error 203 -- heap overflow -- so it is
     the New helper: the compiler passes SizeOf and assigns the result. }
@@ -276,6 +284,90 @@ begin
 end;
 
 
+{ [re] 1000:0f6d, 175 bytes. The scroller, and it is hardware-accelerated:
+  Graphics Controller register 5 is set to write mode 1 for the duration, which
+  copies through the VGA latches so one byte moved shifts four pixels. Source
+  and destination are BOTH in video memory -- ShowFont drew every glyph there
+  and then freed the font, so this copies VRAM to VRAM.
+
+  Frame is 6 bytes and only [bp-2] is used, so two words are declared and never
+  touched. The other three variables it names are the program's.
+
+  1000:0f82 is `mov dx,3`, overwritten by the very next instruction before it
+  can be read. It is dead and it is transcribed anyway -- the wiki's
+  the-original-does-nothing: a reconstruction never invents such a line, so
+  leaving it out shifts every byte after it.
+
+  EQUIVALENT PASCAL, reference only: there is none worth writing. The routine
+  is latch-mode block copy and port programming from end to end. }
+procedure Scroll;
+var
+  Dest  : Word;
+  Spare : Word;
+  Pad   : Word;
+begin
+  asm
+    mov dx, $03CE               { Graphics Controller index port }
+    mov ax, $4105               { register 5 := $41 -- WRITE MODE 1, the latch copy }
+    out dx, ax                  { index and data in one 16-bit out }
+    mov dx, 3                   { DEAD. Overwritten by the next line before any use; }
+    mov dx, $03C4               { the original has it and so does this }
+    mov ax, $0F02               { Map Mask := all four planes }
+    out dx, ax                  { so one write reaches every plane }
+    push es                     { es is borrowed twice below }
+    mov ScrollDone, 0           { clear the wrapped flag }
+    mov ax, SEG Glyph           { the data segment, as a relocated constant }
+    mov es, ax                  { es addresses the width table }
+    mov ax, 0                   { clear the high byte before loading the character }
+    mov al, Glyph               { the character being scrolled in }
+    sub ax, $0020               { space is the first entry }
+    shl ax, 2                   { four bytes per entry }
+    add ax, 2                   { and the second field is wanted, not the first }
+    mov di, ax                  { index into the table }
+    mov bx, es:[di]             { the glyph's source offset. NO BASE IS ADDED, }
+    mov cx, ScrollX             { how far into the glyph the scroll has reached }
+    shr cx, 2                   { four pixels per byte in an unchained plane }
+    add bx, cx                  { so the source walks across the glyph }
+    mov cx, es:[di+2]           { so the table sits at DGROUP offset 0: 59 }
+    mov Width, cx               { kept for the wrap test at the end }
+    mov word ptr [bp-2], $BBD0  { the destination, one row above the split }
+    mov cx, ScnPos              { plus the current scroll offset }
+    add [bp-2], cx              { so the column lands where the CRTC is looking }
+    mov ax, $A000               { video memory }
+    mov es, ax                  { for BOTH source and destination -- the glyphs were }
+    mov cx, $0030               { drawn into VRAM by ShowFont. 48 rows }
+    mov dx, $0140               { 320 bytes between rows }
+    mov si, bx                  { source }
+    mov di, [bp-2]              { destination }
+    @Row:                       { one screen row per pass }
+    cmp ScnPos, $0050           { past the halfway column? }
+    jb  @Once                   { no -- a single copy will do }
+    mov al, es:[si]             { read four pixels through the latches }
+    mov es:[di], al             { write them }
+    mov es:[di-$00A0], al       { and again a row up, to double the column }
+    jmp @Next                   { done with this row }
+    @Once:                      { the narrow case }
+    mov al, es:[si]             { read }
+    mov es:[di], al             { write }
+    @Next:                      { step both pointers }
+    add si, dx                  { one row down in the source }
+    add di, dx                  { one row down in the destination }
+    loop @Row                   { 48 times }
+    pop es                      { restore }
+    add ScrollX, 4              { four pixels of the glyph consumed }
+    mov cx, ScrollX             { compare against the glyph's width }
+    cmp Width, cx               { still inside it? }
+    jg  @Done                   { yes -- nothing to reset }
+    mov ScrollDone, 1           { no -- tell the caller to fetch the next character }
+    mov ScrollX, 0              { and start the next glyph from its left edge }
+    @Done:                      { }
+    mov dx, $03CE               { Graphics Controller again }
+    mov ax, $4005               { register 5 := $40 -- back to write mode 0 }
+    out dx, ax                  { so ordinary writes work again }
+  end;
+end;
+
+
 begin
   { [re] NOT the original main block, which is 1000:11ad and calls twenty-odd
     routines. This exists so the smart linker keeps what has been transcribed:
@@ -288,4 +380,5 @@ begin
   LoadCheck2;
   LoadAsphyx;
   ShowFont;
+  Scroll;
 end.
