@@ -30,13 +30,105 @@ type
     whole of what an all-caps scrolltext needs. }
   TFont = array[32..90, 1..16, 1..16] of Byte;
 
+const
+  { [re] DGROUP 0x00..0xED. A leading Word, then one record per character --
+    the scroller computes (Glyph-32)*4+2 and dereferences with NO base, so the
+    array starts at offset 2 and the Word sits at 0. 2 + 59*4 = 238 = 0xEE,
+    which is exactly where Line1 begins, so the three abut with nothing spare.
+    Ofs is a real video-memory address: char 32 is 1040 = 320*3 + 80, the
+    top-left of where ShowFont drew it, and every one of the 59 agrees with
+    that placement. Values are read out of the original's initialised data. }
+  Glyphs : array[32..90] of record
+    Ofs, Wid : Word;
+  end = (
+    ( Ofs :  1040; Wid : 10 )   { ' ' },
+    ( Ofs :  1045; Wid :  5 )   { '!' },
+    ( Ofs :  1050; Wid : 17 )   { '"' },
+    ( Ofs :  1055; Wid : 17 )   { '#' },
+    ( Ofs :  1060; Wid : 17 )   { '$' },
+    ( Ofs :  1065; Wid : 17 )   { '%' },
+    ( Ofs :  1070; Wid : 17 )   { '&' },
+    ( Ofs :  1075; Wid : 10 )   { "'" },
+    ( Ofs :  1080; Wid : 17 )   { '(' },
+    ( Ofs :  1085; Wid : 17 )   { ')' },
+    ( Ofs :  1090; Wid : 17 )   { '*' },
+    ( Ofs :  1095; Wid : 17 )   { '+' },
+    ( Ofs :  1100; Wid : 10 )   { ',' },
+    ( Ofs :  1105; Wid : 17 )   { '-' },
+    ( Ofs :  1110; Wid :  7 )   { '.' },
+    ( Ofs :  1115; Wid : 15 )   { '/' },
+    ( Ofs :  1120; Wid : 17 )   { '0' },
+    ( Ofs :  1125; Wid : 11 )   { '1' },
+    ( Ofs :  1130; Wid : 17 )   { '2' },
+    ( Ofs :  1135; Wid : 17 )   { '3' },
+    ( Ofs :  1140; Wid : 17 )   { '4' },
+    ( Ofs :  1145; Wid : 17 )   { '5' },
+    ( Ofs :  1150; Wid : 17 )   { '6' },
+    ( Ofs :  1155; Wid : 17 )   { '7' },
+    ( Ofs :  1160; Wid : 17 )   { '8' },
+    ( Ofs :  1165; Wid : 17 )   { '9' },
+    ( Ofs :  1170; Wid :  6 )   { ':' },
+    ( Ofs :  1175; Wid : 17 )   { ';' },
+    ( Ofs :  1180; Wid : 17 )   { '<' },
+    ( Ofs :  1185; Wid : 17 )   { '=' },
+    ( Ofs :  1190; Wid : 17 )   { '>' },
+    ( Ofs :  1195; Wid : 17 )   { '?' },
+    ( Ofs :  1200; Wid : 17 )   { '@' },
+    ( Ofs :  1205; Wid : 17 )   { 'A' },
+    ( Ofs :  1210; Wid : 17 )   { 'B' },
+    ( Ofs :  1215; Wid : 17 )   { 'C' },
+    ( Ofs :  1220; Wid : 17 )   { 'D' },
+    ( Ofs :  1225; Wid : 17 )   { 'E' },
+    ( Ofs :  1230; Wid : 17 )   { 'F' },
+    ( Ofs :  1235; Wid : 17 )   { 'G' },
+    ( Ofs :  1240; Wid : 17 )   { 'H' },
+    ( Ofs :  1245; Wid :  5 )   { 'I' },
+    ( Ofs :  1250; Wid : 17 )   { 'J' },
+    ( Ofs :  1255; Wid : 16 )   { 'K' },
+    ( Ofs :  1260; Wid : 13 )   { 'L' },
+    ( Ofs :  1265; Wid : 17 )   { 'M' },
+    ( Ofs :  1270; Wid : 17 )   { 'N' },
+    ( Ofs :  1275; Wid : 17 )   { 'O' },
+    ( Ofs : 17040; Wid : 17 )   { 'P' },
+    ( Ofs : 17045; Wid : 17 )   { 'Q' },
+    ( Ofs : 17050; Wid : 17 )   { 'R' },
+    ( Ofs : 17055; Wid : 17 )   { 'S' },
+    ( Ofs : 17060; Wid : 17 )   { 'T' },
+    ( Ofs : 17065; Wid : 17 )   { 'U' },
+    ( Ofs : 17070; Wid : 17 )   { 'V' },
+    ( Ofs : 17075; Wid : 17 )   { 'W' },
+    ( Ofs : 17080; Wid : 17 )   { 'X' },
+    ( Ofs : 17085; Wid : 17 )   { 'Y' },
+    ( Ofs : 17090; Wid : 17 )   { 'Z' } );
+
+  { [re] ONE ARRAY, not six separate constants. The originals sit 0x51 apart
+    -- a length byte plus eighty characters, with NO padding between them --
+    and six standalone String[80] constants come out 82 bytes each, because
+    Turbo Pascal word-aligns the next item after an odd-sized one. Array
+    elements pack, so the array reproduces the spacing. Main's code folds the
+    subscript to a fixed base per line, which is why the disassembly shows
+    0xee, 0x13f, 0x190, 0x1e1, 0x232 and 0x283 rather than an index.
+    The text is read out of the ORIGINAL's initialised data, so the trailing
+    spaces are the author's own. }
+  Lines : array[1..6] of String[80] = (
+    '                   HAPPY BIRTHDAY SILKY, HERE''S WISHING U A GR8 18TH!!! ALL THE ',
+    'BEST FROM ASPHYXIA!!!         *   HEHE NOW U R LEGAL!!!   *                     ',
+    'GREETS GO TO :-   SCHMUCK, EARWAX, NOBODY, SPLIT, JAVELIN AND ALL THE OTHERS.   ',
+    'THIS DEMO WAS WRITTEN ESPECIALLY FOR SILKY ON HER EIGHTEEN BIRTHDAY ---------   ',
+    ' BEST WISHES FOR ''93. HAVE A GOOD ONE.......... A S P H Y X I A   R U L Z !!!!!!',
+    '                                                                                ' );
+
+  { [re] A TYPED CONSTANT, not a var. bin/BARS.INC carries it commented out at
+    the foot of the file -- PalCol : Array[1..5] of Byte = (0,30,40,50,60) --
+    and the original's initialised data has exactly those bytes at 0x2d4,
+    which is where Lines ends. Declared as a var it read as four zero bytes.
+    StartPal FillChars it to zero at run time, which a typed constant permits. }
+  PalCol : array[1..5] of Byte = (0,30,40,50,60);
+
 var
   { [re] DGROUP 0x328. DeltaPal's `lea si,t` points at its first byte. It is
     zero-based but indexed from 1 everywhere, which puts T[1] at 0x32b. }
   T : array[0..255] of RGBt;
-  { [re] DGROUP 0x2d4, five bytes -- StartPal's FillChar(palcol,SizeOf(palcol),0)
-    compiles to FillChar(ds:0x2d4, 5, 0) at 1000:097a. }
-  PalCol : array[1..5] of Byte;
   { [re] DGROUP 0x320, named by BARS.INC's rotpal. 1000:11ce zeroes it. }
   GlobCount : Word;
   { [re] DGROUP 0x62c. gotoscnpos adds 0xbb80 and hands the sum to the CRTC
@@ -63,6 +155,9 @@ var
   { [re] DGROUP 0x634. Main fills it in six blocks of 80 from the initialised
     text at 0xee onwards. The loop reads 420 characters before wrapping. }
   Text       : array[1..480] of Char;
+  { [re] DGROUP 0x814. Main's copy loops use a GLOBAL counter, not a local --
+    the stores are `mov [0x814],ax` rather than a frame slot. }
+  Loop       : Word;
   ScrollDone : Byte;
   Glyph      : Byte;
   Width      : Word;
@@ -458,18 +553,115 @@ begin
 end;
 
 
+{ [re] 1000:10a1, 29 bytes, frameless -- an assembler procedure with no
+  parameters gets no frame and no stack check.
+
+  EQUIVALENT PASCAL, reference only:
+    Crtc[$18] := 100;
+    Crtc[$07] := Crtc[$07] and $EF;
+    Crtc[$09] := Crtc[$09] and $BF;
+  The original steps the index and data ports with inc/dec rather than
+  reloading DX, so it is transcribed. }
+procedure SplitScreen; assembler;
+asm
+  mov dx, $03D4  { CRTC index port }
+  mov al, $18    { index 18h, Line Compare -- the split scanline }
+  out dx, al     { select it }
+  inc dx         { 3D5, the data port }
+  mov al, $64    { 100: the screen splits halfway down }
+  out dx, al     { write it }
+  dec dx         { back to the index }
+  mov al, 7      { index 7, Overflow -- holds line compare bit 8 }
+  out dx, al     { }
+  inc dx         { }
+  in  al, dx     { read it }
+  and al, $EF    { clear bit 4, so bit 8 of the compare is 0 }
+  out dx, al     { }
+  dec dx         { }
+  mov al, 9      { index 9, Max Scan Line -- holds line compare bit 9 }
+  out dx, al     { }
+  inc dx         { }
+  in  al, dx     { }
+  and al, $BF    { clear bit 6, so bit 9 is 0 as well }
+  out dx, al     { the compare is therefore exactly 100 }
+end;
+
+{ [re] 1000:10be, 6 bytes, frameless.
+
+  EQUIVALENT PASCAL, reference only: TextMode(CO80). That emits a Crt call
+  and a good deal more; the original is the BIOS call and nothing else. }
+procedure TextMode3; assembler;
+asm
+  mov ax, $0003  { BIOS mode 3 }
+  int $10        { 80x25 colour text, which is where DOS was }
+end;
+
+{ [re] 1000:10c4, 27 bytes. Fills the whole palette buffer with 63 -- every
+  channel at full -- so the screen is white before FadeOut walks it down. }
+procedure WhiteOut;
 begin
-  { [re] NOT the original main block, which is 1000:11ad and calls twenty-odd
-    routines. This exists so the smart linker keeps what has been transcribed:
-    with an empty main it dropped every routine AND all of ModeX. }
-  SetModeX;
-  Drawit;
-  StartPal;
-  ClampDown;
+  FillChar(T,768,63);
+end;
+
+{ [re] 1000:10df, 181 bytes. Sixty-four passes clipping every channel of all
+  256 colours to a ceiling that drops by one each time, uploading after each
+  pass. The same shape as ClampDown but unconditional and self-driving, and
+  the reason the demo opens by fading up from white. }
+procedure FadeOut;
+var
+  Level : Byte;
+  Ix    : Byte;
+begin
+  for Level := 63 downto 0 do
+  begin
+    for Ix := 0 to 255 do
+    begin
+      if T[Ix].r > Level then T[Ix].r := Level;
+      if T[Ix].g > Level then T[Ix].g := Level;
+      if T[Ix].b > Level then T[Ix].b := Level;
+    end;
+    DeltaPal;
+  end;
+end;
+
+{ [re] 1000:1194, 10 bytes, frameless -- three near calls and a ret, which is
+  an assembler procedure. Not an exit routine: RunScroll is the demo's last
+  scene, and TextMode3 after it is the cleanup.
+
+  EQUIVALENT PASCAL, reference only: the three calls as statements. Written
+  that way it would carry a frame and a stack check the original has not got. }
+procedure Finish; assembler;
+asm
+  call GotoScnPos  { point the CRTC at the start of the scroll area }
+  call RunScroll   { and run the scrolltext until the fade ends it }
+  call TextMode3   { then hand the screen back to DOS }
+end;
+
+
+begin
+  { [re] 1000:11ad, the original main block. }
   LoadFont;
-  LoadCheck2;
-  LoadAsphyx;
+  ScnPos := 0;
+  Width := 0;
+  ScrollX := 0;
+  Fading := 0;
+  GlobCount := 0;
+  Bright := 63;
+  LineWidth := 160;
+  SetModeX;
+  WhiteOut;
+  FadeOut;
+  SplitScreen;
   ShowFont;
-  Scroll;
-  RunScroll;
+  LoadCheck2;
+  Drawit;
+  LoadAsphyx;
+  for Loop := 1 to 80 do Text[Loop] := Lines[1][Loop];
+  for Loop := 1 to 80 do Text[Loop+80] := Lines[2][Loop];
+  for Loop := 1 to 80 do Text[Loop+160] := Lines[3][Loop];
+  for Loop := 1 to 80 do Text[Loop+240] := Lines[4][Loop];
+  for Loop := 1 to 80 do Text[Loop+320] := Lines[5][Loop];
+  for Loop := 1 to 80 do Text[Loop+400] := Lines[6][Loop];
+  StartPal;
+  Finish;
 end.
