@@ -115,9 +115,12 @@ Two details rule out coincidence. `RotPal2` frames `0x32` bytes of locals in bot
 
 ### So what is BARS.INC?
 
-**The original source, at a different revision.** Two edits are known:
+**The original source, at a different revision.** Three edits are known:
 
 * `DeltaPal` writes `rep outsb` where the binary does `lodsb` / `out dx,al` / `loop`.
 * `Drawit` declares `F : File`, never uses it, and has a conspicuous gap before its `End` — the `scroll.col` loading that `1000:0052` performs has been taken out.
+* `Drawit` is also missing the loop at `1000:00af` that blacks out the eighty-nine colours the bars use, in the buffer and through `SetPalette` both, before anything is drawn in them.
+
+`src/BARS.INC` is the include with all three put back, and each is marked where it happens.
 
 The working rule is therefore: compile each routine and let the bytes decide. That is now cheap.

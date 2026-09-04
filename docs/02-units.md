@@ -1,6 +1,6 @@
 # The two small units: 112f and 113c
 
-Both are read in full — 208 and 128 bytes, every instruction accounted for. Neither name is recovered from the image; both are this reconstruction's choice, and the linker map will record what *we* called them, which is not the same as what the authors called them.
+Both are read in full — 208 and 128 bytes, every instruction accounted for. Neither name is recovered from the image; both are this reconstruction's choice. `build/SILKY.MAP` now records them, and what it records is what *we* called them, which is not the same as what the authors called them.
 
 Every routine in both units opens with `lcall 11a6:04df`, which is the runtime's stack check. `AX` carries the number of bytes of locals the routine is about to claim — `0` where there are none.
 
@@ -39,7 +39,7 @@ Three parameters: `x` at `[bp+0xa]`, `y` at `[bp+8]`, colour at `[bp+6]`. `retf 
 - The row is `[0x816] * y * 2`. The doubling is because CRTC `13` counts in words, so the byte stride per line is twice the Offset register — which is the same `[0x816]` written at `0043`. One value, two readers, consistent.
 - `es = 0xa000`, `es:[di] = colour`.
 
-**DGROUP `0x816` is the line width**, and both routines depend on it. Nothing in these 208 bytes writes it, so it is set elsewhere — the program, or the unit init this segment does not appear to have.
+**DGROUP `0x816` is the line width**, and both routines depend on it. Nothing in these 208 bytes writes it, so it is set elsewhere. It is the program: `LineWidth := 160` in the main block, immediately before the call that sets the mode. This segment has no init of its own.
 
 ## 113c — the palette unit
 

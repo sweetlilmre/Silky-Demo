@@ -55,6 +55,8 @@ The surviving hypothesis is therefore **the compiler, not the source**: a TP6 pa
 * **Five declared-and-unused locals** — `Drawit`'s `F`, `RotPal2`'s `loop2`, `ShowFont`'s 255, `Scroll`'s two spare words, `RunScroll`'s one. Each is real: the frame sizes require them.
 * **Which of `Dummy`/`Spare` shapes `LoadFont`'s 260 spare bytes.** Only the total is recoverable from a frame size.
 
+Each of these is tagged `[reading]` where it is declared in `src/`, and that tag is deliberately not stripped from `src-clean/`, so the four survive into the copy a reader reads rather than being quietly presented as measurements.
+
 ## It has been watched
 
 On 4 Sep 2026 a person ran both binaries from `run/` and reported no difference between them. Recorded as `SILKY part matches R3` against `ORIG.EXE` — the highest rung the ladder grants, and the only one whose instrument is a person looking at a screen.

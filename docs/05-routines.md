@@ -1,8 +1,8 @@
 # The remaining program routines
 
-What each of the larger routines in segment `1000` does, from its instructions. Together with [04-palette-animation.md](04-palette-animation.md) this accounts for every routine in the segment except the four file loaders and the twin pair already covered.
+What each of the larger routines in segment `1000` does, from its instructions. The name in brackets after each heading is the one the reconstruction uses; `PlayPal` and `StartPal` are the authors' own, from `BARS.INC`, and the rest are ours. Together with [04-palette-animation.md](04-palette-animation.md) this accounts for every routine in the segment except the four file loaders and the twin pair already covered.
 
-## `064b` — the palette builder, 787 bytes
+## `064b` — the palette builder, 787 bytes (`PlayPal`)
 
 No calls but the stack check; 140 `mov`, 66 `add`, 18 `shl`. It writes the palette buffer directly, indexed:
 
@@ -16,7 +16,7 @@ Six such stores write `cl` and six write a literal `0`, so each colour channel i
 
 So the 768-byte palette is **generated**, not loaded, from two base colours and a per-entry table.
 
-## `095e` — the palette ramp, 157 bytes
+## `095e` — the palette ramp, 157 bytes (`StartPal`)
 
 ```
 call 000e                      set the start address
@@ -30,7 +30,7 @@ then ramp:  [0x2d5] up to 0x1e (30), [0x2d6] up by 2 to 0x28 (40), ...
 
 `System:09f6` taking a pointer, a count and a fill byte is `FillChar`. The parameters this ramps at `0x2d4..0x2d8` are the same ones `064b` reads, so this is an animated fade: nudge the parameters, regenerate, upload, repeat.
 
-## `0cb1` — the blitter, 700 bytes
+## `0cb1` — the blitter, 700 bytes (`ShowFont`)
 
 Six `lcall 112f:0000` — six PutPixel sites — and all six are byte-identical in their final four instructions:
 
@@ -50,7 +50,7 @@ The source is a **far pointer held at DGROUP `0x628`**, loaded with `les di, ptr
 
 `0cb1` is `ShowFont`. It renders **every glyph** into video memory — characters 32 to 79 at `y = Row*3` and then 80 to 90 at `y = Row*3+50`, each source row drawn three screen rows tall — and then frees the font. The six sites are those two groups of three. The scroller afterwards copies glyphs out of video memory, which is why the font can be released at all. The full reading is in [06-state.md](06-state.md) and the routine is transcribed byte-for-byte.
 
-## `0f6d` — the VRAM block copy, 175 bytes
+## `0f6d` — the VRAM block copy, 175 bytes (`Scroll`)
 
 ```
 3ce <- 0x4105     Graphics Mode register 5 := 0x41 -- WRITE MODE 1
@@ -63,7 +63,7 @@ Write mode 1 copies the VGA latches straight to memory, which is the standard Mo
 
 This is the scroll engine: copy within display memory, then move the start address.
 
-## `09fb` and `10df`
+## `09fb` and `10df` (`ClampDown` and `FadeOut`)
 
 `09fb` (191 bytes) reads `0x323` seven times and `0x322` once. Main sets `[0x323] := 0x3f` — 63, the top of a VGA DAC component — and `[0x322] := 0`, so this is fade-related, but it is not read further here.
 
