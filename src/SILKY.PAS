@@ -37,6 +37,12 @@ var
     the Count trio nine times each and the Value trio three times each.
     Value..Value3 are SIGNED: PlayPal does `Value2 := -1`, and Byte refused
     to compile it. ShortInt is one byte too, so the store is the same. }
+  { [re] DGROUP 0x322 and 0x323. Main sets Fading := 0 at 1000:11c9 and
+    Bright := 0x3f at 11d3 -- 63, the top of a VGA DAC component. ClampDown
+    below runs only while Fading = 1 and decrements Bright each pass, so the
+    pair is a fade-out driven through the palette buffer. Names are ours. }
+  Fading : Byte;
+  Bright : Byte;
   Value, Value2, Value3 : ShortInt;
   Count, Count2, Count3 : Byte;
 
@@ -115,6 +121,27 @@ end;
   @asm 000 1000:002b +28 DeltaPal }
 {$I BARS.INC}
 
+{ [re] 1000:09fb, 191 bytes. Frames 2 bytes for a byte counter. Runs the whole
+  256-entry palette and clips every channel to Bright, then lowers Bright by
+  one -- so repeated calls walk the picture down to black without touching the
+  DAC directly, since DeltaPal is what uploads T. }
+procedure ClampDown;
+var
+  Loop : Byte;
+begin
+  if Fading = 1 then
+  begin
+    for Loop := 0 to 255 do
+    begin
+      if T[Loop].r > Bright then T[Loop].r := Bright;
+      if T[Loop].g > Bright then T[Loop].g := Bright;
+      if T[Loop].b > Bright then T[Loop].b := Bright;
+    end;
+    Dec(Bright);
+  end;
+end;
+
+
 begin
   { [re] NOT the original main block, which is 1000:11ad and calls twenty-odd
     routines. This exists so the smart linker keeps what has been transcribed:
@@ -122,4 +149,5 @@ begin
   SetModeX;
   Drawit;
   StartPal;
+  ClampDown;
 end.

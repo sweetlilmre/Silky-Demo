@@ -49,12 +49,14 @@ resolution = "They are a forward/backward pair of palette cyclers, and the whole
 [[plan.investigation]]
 name = "folded-subscript-at-0cb1"
 finding = "The blitter at 0cb1 reads its source with mov al, es:[di - 0x2011], where di is a far pointer from DGROUP 0x628 plus [bp-2]*256 plus [bp-1]*16. The wiki observation subscript-fold-names-the-bounds says a constant folded into the displacement encodes the arrays lower bounds, so 0x2011 should name them and give the source images dimensions for free. It does not decompose against the two strides seen: 0x2011 is 32*256 + 17, and 17 is not a multiple of the 16-byte stride, so a third term is in play. Reading the rest of the index arithmetic in 0cb1 settles it, and the answer is the shape of whatever Check2.Cel or Asphyx.Cel holds."
-state = "open"
+state = "resolved"
+resolution = "Solved, and it hands over the source images shape as the wiki observation said it would. 0x2011 is 32*256 + 1*16 + 1, so the array is array[32..N, 1..16, 1..16] of Byte -- character, row, column, all three of the strides now accounted for. It is the FONT: 1000:0ac9 pushes 0x3b00 to a System allocator at 11a6:023f and stores the returned far pointer at 0x628, and 0x3b00 is 15104, which is exactly the size of bin/GOLD.FNT on disk. 15104 over 256 is 59 glyphs of 16 by 16, and characters 32 to 90 inclusive is 59 -- space through Z, which is exactly the character set the all-caps scrolltext needs. Four numbers agree that were measured independently."
 
 [[plan.investigation]]
 name = "heap-pointer-at-0628"
 finding = "DGROUP 0x628 holds a FAR POINTER, loaded with les di, ptr [0x628] nine times in the blitter at 0cb1. Nothing in segment 1000 writes image data to an absolute DGROUP address, which is explained by this: the picture lives on the heap and only the pointer is in DGROUP. Whoever allocates it and whichever loader fills it is unread. This is also the most likely resolution path for table-at-dgroup-0717, since a second heap structure would be reached the same way and would equally leave no absolute reference."
-state = "open"
+state = "resolved"
+resolution = "It is the font buffer. 1000:0aba pushes 0x3b00 -- 15104 bytes, the size of bin/GOLD.FNT -- to a System routine at 11a6:023f that returns a far pointer in DX:AX, and stores it at 0x628 and 0x62a. The blitter at 0cb1 loads that pointer with les di and indexes it by character times 256 plus row times 16, which is why nothing in the segment references the picture by absolute address. Whether the source spells the allocation New or GetMem is not settled by the bytes and will be settled by building it: 023f takes a size and returns a pointer, which is not TP GetMem procedure signature."
 
 [[plan.investigation]]
 name = "modex-identical"
@@ -123,4 +125,9 @@ resolution = "Fixed in kit d5ab9c2 with wiki/observations/annotation-counted-the
 [[plan.investigation]]
 name = "markers-blocked-until-rtl-converges"
 finding = "Eight of the eleven transcribed routines cannot carry an @asm marker yet. routines.py walks a routines bytes and stops at the first it cannot forgive, and for every FRAMED routine here that byte is the far call to the stack check at 11a6:04df: our System segment is at 0x00b80 and 1811 bytes long against the originals 2576, so the call target differs. All eight report SHORT at 6 or 7 bytes while being correct -- 2544 bytes across the run measure zero unexplained once relocation and DGROUP placement are accounted for, and that was checked against the MZ relocation table rather than against the same rule twice. They are held back rather than marked because a check list red for eight known-good routines is a check nobody reads, which is how a real regression hides. Marked: WaitRetrace, GotoScnPos and DeltaPal, all assembler with no stack check in the prologue, all three now LOCKED. This closes when the RTL converges, which is a consequence of transcribing more rather than a task of its own."
+state = "open"
+
+[[plan.investigation]]
+name = "clampdown-entry-construct"
+finding = "ClampDown at 09fb is transcribed and its BODY is right -- 156 bytes with zero unexplained once DGROUP addresses are accounted for -- but the two-byte entry construct is not. The original emits cmp byte [0x322],1 then jne to a trampoline that jmps near to the epilogue, with a short jmp over the trampoline to the body: seven bytes. `if Fading = 1 then begin ... end` emits the compact je over the near jmp: five. The near displacement e9 9a 00 is identical in both, so the body length already matches and only the branch form differs; the two-byte shift is what makes the whole routine read as 125 unexplained. A single-arm case was tried and is worse -- it loads through AL rather than comparing memory directly. TP600 and TP601 were both built and produce IDENTICAL output across the whole 2726-byte run, so the patch level is not the cause and that question is settled as indistinguishable on this corpus so far."
 state = "open"
