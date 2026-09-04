@@ -16,6 +16,13 @@ type
     r, g, b : Byte;
   end;
 
+  { [re] The bounds come from the blitter's folded subscript at 0cb1, which
+    biases by 0x2011 = 32*256 + 1*16 + 1. 59 characters of 16 by 16 is 15104
+    bytes, which is both SizeOf pushed to New at 0ac9 and the size of
+    bin/GOLD.FNT on disk. Characters 32 to 90 is space through Z, which is the
+    whole of what an all-caps scrolltext needs. }
+  TFont = array[32..90, 1..16, 1..16] of Byte;
+
 var
   { [re] DGROUP 0x328. DeltaPal's `lea si,t` points at its first byte. It is
     zero-based but indexed from 1 everywhere, which puts T[1] at 0x32b. }
@@ -43,6 +50,10 @@ var
     pair is a fade-out driven through the palette buffer. Names are ours. }
   Fading : Byte;
   Bright : Byte;
+  { [re] DGROUP 0x628, a FAR POINTER. 11a6:023f takes one word, calls the
+    heap allocator and raises runtime error 203 -- heap overflow -- so it is
+    the New helper: the compiler passes SizeOf and assigns the result. }
+  Font : ^TFont;
   Value, Value2, Value3 : ShortInt;
   Count, Count2, Count3 : Byte;
 
@@ -142,6 +153,25 @@ begin
 end;
 
 
+{ [re] 1000:0aba, 118 bytes. Frame 0x184 = 388: the File is at bp-0x80 so it is
+  declared first, and 260 bytes follow it that this routine never touches --
+  the same shape as Drawit's unused F. A String plus a LongInt makes 260
+  exactly; the composition is not recoverable from the frame size alone, only
+  the total is. }
+procedure LoadFont;
+var
+  F     : File;
+  Dummy : String;
+  Spare : LongInt;
+begin
+  New(Font);
+  Assign(F,'gold.Fnt');
+  Reset(F,1);
+  BlockRead(F,Font^,15104);
+  Close(F);
+end;
+
+
 begin
   { [re] NOT the original main block, which is 1000:11ad and calls twenty-odd
     routines. This exists so the smart linker keeps what has been transcribed:
@@ -150,4 +180,5 @@ begin
   Drawit;
   StartPal;
   ClampDown;
+  LoadFont;
 end.
