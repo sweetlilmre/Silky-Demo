@@ -41,6 +41,17 @@ matched = 14
 [routine."SILKY.rotpal"]
 matched = 90
 
+[observation."SILKY"]
+harness = "SILKY"
+tier = "part"
+outcome = "matches"
+achieved = "R3"
+observer = "maintainer"
+date = "2026-09-04"
+confirmed_at = "c1acac55cc41"
+fingerprint = "be5b794ab57277a1"
+against = "ORIG.EXE"
+
 [[plan.investigation]]
 name = "unidentified-units-112f-113c"
 finding = "Two code segments have no name. 112f is 208 bytes, called from the program at nine sites through 112f:0000 and once through 112f:0043, and calls out only to System. 113c is 128 bytes, entered at 113c:0045 and 113c:0067, and holds the load images only virtual call site, a CALLF [DI+cb] at 113c:0079, so something in it is an object with a VMT. Both were located from the MZ relocation table rather than a linker map, so their extents are sound but their identities are unread. Crt at 1144 was settled by DISASSEMBLING IT: six routines that only Crt has, including Sound programming 8253 channel 2 through ports 0x43 and 0x42, Window storing WindMin and WindMax, and a ReadKey on int 16h. A comparison against a sibling binary suggested the name first, but that only worked because another target on this machine happens to link the same unit, which is luck and not a method. The cheapest next attempt for these two is the same disassembly: read what they touch. 113c is 128 bytes and holds the only VMT call site in the image, so its object declaration is the thing to recover first."

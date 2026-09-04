@@ -55,8 +55,16 @@ The surviving hypothesis is therefore **the compiler, not the source**: a TP6 pa
 * **Five declared-and-unused locals** — `Drawit`'s `F`, `RotPal2`'s `loop2`, `ShowFont`'s 255, `Scroll`'s two spare words, `RunScroll`'s one. Each is real: the frame sizes require them.
 * **Which of `Dummy`/`Spare` shapes `LoadFont`'s 260 spare bytes.** Only the total is recoverable from a frame size.
 
-## What has never been done
+## It has been watched
 
-**Nothing here has been watched.** `run/` holds `GO.BAT`, `ORIG.EXE`, `OURS.EXE` and the four data files, and a person can launch it — but no run has happened, so `observe.py` has nothing to record and every harness stands at R0.
+On 4 Sep 2026 a person ran both binaries from `run/` and reported no difference between them. Recorded as `SILKY part matches R3` against `ORIG.EXE` — the highest rung the ladder grants, and the only one whose instrument is a person looking at a screen.
 
-The structural strand is one construct short of complete. The behavioural strand has not started, and no instrument in the kit may start it.
+That is worth stating carefully, because it is a different kind of claim from everything above it. Every other number here is a byte comparison and can be recomputed on demand. This one cannot: it is a dated statement that somebody watched, and its whole value is that no tool invented it. `observe.py` exists to refuse a run nobody made.
+
+The observation is **about this build**. It stores the commit and a fingerprint of the sources the harness depends on, so an edit to `src/` marks it stale rather than false — a gap in knowledge, not a regression.
+
+## So where it stands
+
+The structural strand is one compiler construct short of byte-identity. The behavioural strand is at **R3**: two binaries, watched side by side, no visible difference.
+
+Neither settles the other. A demo can look right and differ in bytes, and byte-identity was never going to prove the screen. Both are now measured.
