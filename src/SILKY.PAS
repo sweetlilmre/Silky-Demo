@@ -323,10 +323,16 @@ end;
   sweeps across the short-jump boundary and never once emits the long form --
   and a label at the head of the body does not change it either.
 
-  [reading] Two spellings compile to these bytes and nothing distinguishes
-  them: `goto Done` after the guard with the label at the end, or `Exit`. The
-  first is written here. Which one the authors wrote is not recoverable, and
-  the routine is byte-identical either way.
+  WHICH OF THE TWO SPELLINGS, ON THE AUTHOR'S OWN WORD. `goto Done` with the
+  label at the end of the routine and a bare `Exit` compile to the same near
+  jump to the same epilogue, so no measurement can separate them. Asked, the
+  author said the `Exit` form is the natural one and the label would have had
+  a name that says what it is. That is testimony, not a measurement, and it
+  is the best evidence available for a choice the bytes cannot make.
+
+  [reading] The label's spelling is ours. `DoFade` says what the jump is for;
+  what it was actually called is not in the executable, because a label's
+  name never reaches the code.
 
   [re] 1000:09fb, 191 bytes. Frames 2 bytes for a byte counter. Runs the whole
   256-entry palette and clips every channel to Bright, then lowers Bright by
@@ -334,13 +340,13 @@ end;
   DAC directly, since DeltaPal is what uploads T. }
 procedure ClampDown;
 label
-  Body, Done;
+  DoFade;
 var
   Loop : Byte;
 begin
-  if Fading = 1 then goto Body;
-  goto Done;
-Body:
+  if Fading = 1 then goto DoFade;
+  Exit;
+DoFade:
   for Loop := 0 to 255 do
   begin
     if T[Loop].r > Bright then T[Loop].r := Bright;
@@ -348,7 +354,6 @@ Body:
     if T[Loop].b > Bright then T[Loop].b := Bright;
   end;
   Dec(Bright);
-Done:
 end;
 
 

@@ -18,12 +18,13 @@ The rebuild is the original: header, relocation table, all five segments and the
 The last two bytes took the longest and are worth recording. `ClampDown`'s guard is seven bytes where a plain `if Fading = 1 then` compiles to five, and sixteen spellings of that `if`, across three compilers, all produced the five. The mistake was to read that as a difference in the code generator; it was a difference in the source. The original keeps the polarity of its test -- it jumps away on `jne` and reaches its body by a short jump, which a compiler never needs to do and a source asking for both jumps does:
 
 ```pascal
-  if Fading = 1 then goto Body;
-  goto Done;
-Body:
+  if Fading = 1 then goto DoFade;
+  Exit;
+DoFade:
   ...
-Done:
 ```
+
+Two spellings of that compile identically, and the author of the demo said which of them he would have written. The label's name is ours; a label never reaches the code.
 
 ## The two copies of the source
 
