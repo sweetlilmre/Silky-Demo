@@ -5,6 +5,15 @@
 # hand-edit them. To accept a regression, lower `target` with a `reason`.
 # [plan] is DECIDED: investigation order is the priority order.
 
+[coverage]
+targets = 2
+
+[routine."SILKY.GotoScnPos"]
+matched = 29
+
+[routine."SILKY.WaitRetrace"]
+matched = 14
+
 [[plan.investigation]]
 name = "unidentified-units-112f-113c"
 finding = "Two code segments have no name. 112f is 208 bytes, called from the program at nine sites through 112f:0000 and once through 112f:0043, and calls out only to System. 113c is 128 bytes, entered at 113c:0045 and 113c:0067, and holds the load images only virtual call site, a CALLF [DI+cb] at 113c:0079, so something in it is an object with a VMT. Both were located from the MZ relocation table rather than a linker map, so their extents are sound but their identities are unread. Crt at 1144 was settled by DISASSEMBLING IT: six routines that only Crt has, including Sound programming 8253 channel 2 through ports 0x43 and 0x42, Window storing WindMin and WindMax, and a ReadKey on int 16h. A comparison against a sibling binary suggested the name first, but that only worked because another target on this machine happens to link the same unit, which is luck and not a method. The cheapest next attempt for these two is the same disassembly: read what they touch. 113c is 128 bytes and holds the only VMT call site in the image, so its object declaration is the thing to recover first."
@@ -79,4 +88,15 @@ state = "open"
 [[plan.investigation]]
 name = "asm-lines-need-comments"
 finding = "asmaudit reports 0 units meet the rule and 2 do not. WORKING.md section 6 requires hand-written assembler to be transcribed verbatim with a comment on EVERY line. The assembler I have written -- WaitRetrace and GotoScnPos in SILKY.PAS, SetModeX and SetPlanes asm block in MODEX.PAS, and the DeltaPal edit in BARS.INC -- carries block comments explaining what each routine does but not per-line commentary. The tool exits 0 so it is not gating, which is exactly why it went unnoticed for three commits. Roughly seventy lines need comments. Note BARS.INC is ORIGINAL source and its own assembler is the authors, not ours; only the lines this reconstruction wrote are covered by the rule."
+state = "resolved"
+resolution = "Done. Every hand-written assembler line in MODEX.PAS and SILKY.PAS now carries a comment, and each asm block has an EQUIVALENT PASCAL block above it labelled reference only, which is what asmaudit checks. It reports 2 units meet the rule, 0 do not. The rebuild is byte-for-byte unchanged -- MODEX still identical and the three program routines still zero unexplained -- so the comments cost nothing, which is the point of doing it at the moment the code is written. One trap on the way: the first EQUIVALENT PASCAL block used nested braces for its annotations and build.py refused with `nested { inside a { } comment -- TP7 does not nest, the comment ended early`. The lint caught it before the compiler did."
+
+[[plan.investigation]]
+name = "routines-locator-and-relocated-prologue"
+finding = "routines.py locates a marked routine by searching the built image for the ORIGINALS opening bytes, and a relocated address inside those bytes defeats it. Measured here: PutPixel at 112f:0000 and SetPlane at 112f:00a0 were reported NOT FOUND in any built image while both were demonstrably present, at 0x923 and 0x9db. Both open with push bp, mov bp sp, xor ax ax, then a FAR CALL to the stack check whose four address bytes are relocated. SetModeX, whose prologue holds no fixup at all, was found and measured 93 bytes. WaitRetrace and GotoScnPos are assembler with no stack check and were found. This matters beyond these two: with $S+, which this target measurably uses, nearly every framed Turbo Pascal routine opens with that same far call, so most program routines will hit it as markers are added. --probe exists for the case and its candidates here were past the segment end, so it did not help. Markers were removed from MODEX.PAS because a unit is measured by units.py against its own TPU, which already reports it identical over all 202 bytes; the note in the file says so. Not yet raised as a kit change: verify the diagnosis on a second routine first."
+state = "open"
+
+[[plan.investigation]]
+name = "routines-emit-needs-a-path"
+finding = "routines.py --emit with no path raises IndexError: list index out of range from argv.index(\"--emit\") + 1 at line 286, instead of printing usage. Small, but it is a crash where every other argument error in this kit prints a sentence. Trivial fix in the kit; recorded rather than patched because a kit change needs accepting by every consumer."
 state = "open"

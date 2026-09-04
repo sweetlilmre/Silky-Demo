@@ -37,38 +37,49 @@ var
 { [re] 1000:0000, 14 bytes. Called NEAR by DeltaPal -- `e8` with no `push cs`
   at 1000:002e -- so it is local, not far. BARS.INC calls it but does not
   declare it. }
+{ [re] Transcribed from the original at this address, 14 bytes.
+  @asm 000 1000:0000 +14 }
 procedure WaitRetrace; assembler;
+{ EQUIVALENT PASCAL, reference only:
+    repeat until (Port[$3DA] and 8) = 0;
+    repeat until (Port[$3DA] and 8) <> 0;  }
 asm
-  mov dx, $03DA
-@NotInRetrace:
-  in  al, dx
-  test al, 8
-  jnz @NotInRetrace
-@InRetrace:
-  in  al, dx
-  test al, 8
-  jz  @InRetrace
+  mov dx, $03DA     { Input Status 1 -- bit 3 is the vertical retrace flag }
+  @NotInRetrace:    { first wait: leave any retrace already in progress }
+  in  al, dx        { sample the status }
+  test al, 8        { still retracing? }
+  jnz @NotInRetrace { yes -- keep waiting for it to end }
+  @InRetrace:       { second wait: for the NEXT retrace to begin }
+  in  al, dx        { sample again }
+  test al, 8        { has it started? }
+  jz  @InRetrace    { no -- spin. Falling through means retrace just began }
 end;
 
 { [re] 1000:000e, 29 bytes. BARS.INC's StartPal opens with `gotoscnpos`, and
   095e -- which is StartPal -- opens with a near call to 000e, so that is this
   routine's original name. CRTC 0c and 0d are the start address, high then low. }
+{ [re] Transcribed from the original at this address, 29 bytes.
+  @asm 000 1000:000e +29 }
 procedure GotoScnPos; assembler;
+{ EQUIVALENT PASCAL, reference only:
+    ofs := ScnPos + $BB80;
+    Port[$3D4] := $0C;  Port[$3D5] := Hi(ofs);
+    Port[$3D4] := $0D;  Port[$3D5] := Lo(ofs);  }
 asm
-  mov bx, ScnPos
-  add bx, $BB80
-  mov dx, $03D4
-  mov al, $0C
-  out dx, al
-  inc dx
-  mov al, bh
-  out dx, al
-  mov dx, $03D4
-  mov al, $0D
-  out dx, al
-  inc dx
-  mov al, bl
-  out dx, al
+  mov bx, ScnPos { the scroll offset, in bytes }
+  add bx, $BB80  { plus the base of the visible page }
+  mov dx, $03D4  { CRTC index port }
+  mov al, $0C    { index 0Ch, Start Address High }
+  out dx, al     { select it }
+  inc dx         { 3D5, the data port }
+  mov al, bh     { high byte of the address }
+  out dx, al     { write it }
+  mov dx, $03D4  { index port again }
+  mov al, $0D    { index 0Dh, Start Address Low }
+  out dx, al     { select it }
+  inc dx         { data port }
+  mov al, bl     { low byte }
+  out dx, al     { write it -- the display now starts here }
 end;
 
 { [re] The original source, copied from bin/BARS.INC. bin/ holds the shipped

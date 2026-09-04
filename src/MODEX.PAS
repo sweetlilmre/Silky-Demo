@@ -20,6 +20,16 @@ procedure SetModeX;
 
 implementation
 
+{ [re] NO @asm MARKERS IN THIS UNIT, deliberately. A unit is measured by
+  units.py against its own .TPU, and that reports this one identical over all
+  202 bytes -- a stronger statement than any per-routine marker. Markers were
+  tried and removed: routines.py searches the LINKED image for a routine's
+  opening bytes, and PutPixel and SetPlane both open with a relocated far call
+  to the stack check, which defeats the search and reports NOT FOUND for
+  routines that are demonstrably present at 0x923 and 0x9db. SetModeX, whose
+  prologue holds no fixup, was found. Markers belong on the PROGRAM's routines,
+  which have no .TPU and so no other instrument. }
+
 { [re] Forward because PutPixel calls it, and FAR -- the call site proves it.
   112f:0014 pushes the argument, 112f:0015 is `push cs`, and only then comes
   `call 0xa0`. Pushing CS before a near call is how Borland reaches a FAR
@@ -43,72 +53,73 @@ begin
 end;
 
 procedure SetModeX; assembler;
+  { EQUIVALENT PASCAL, reference only -- this is NOT what is compiled:
+      asm is transcribed verbatim because it is hand-written.
+
+        TextMode(...);                        -- int 10h, mode 13h
+        Seq[4]  := (Seq[4] and $F7) or $04;   -- chain-4 off
+        Gfx[5]  := Gfx[5] and $EF;            -- odd/even off
+        Gfx[6]  := Gfx[6] and $FD;            -- chain odd/even off
+        Seq[2]  := $0F;                       -- all planes
+        FillWord(Mem[$A000:0], $8000, 0);     -- clear 64K
+        Crtc[$14] := Crtc[$14] and $BF;       -- doubleword off
+        Crtc[$17] := Crtc[$17] or  $40;       -- byte mode
+        Crtc[$13] := LineWidth;               -- the offset register }
 asm
-  mov ax, $0013
-  int $10
-
-  { [re] Sequencer 04 -- clear bit 3 to turn chain-4 OFF, set bit 2 for
-    sequential (odd/even disabled). This is the whole point of the unit. }
-  mov dx, $03C4
-  mov al, 4
-  out dx, al
-  inc dx
-  in  al, dx
-  and al, $F7
-  or  al, $04
-  out dx, al
-
-  { [re] Graphics Controller 05 bit 4 and 06 bit 1 -- drop odd/even. }
-  mov dx, $03CE
-  mov al, 5
-  out dx, al
-  inc dx
-  in  al, dx
-  and al, $EF
-  out dx, al
-  dec dx
-  mov al, 6
-  out dx, al
-  inc dx
-  in  al, dx
-  and al, $FD
-  out dx, al
-
-  { [re] Map Mask to all four planes, then clear 64K in one pass. }
-  mov dx, $03C4
-  mov ax, $0F02
-  out dx, ax
-  mov ax, $A000
-  mov es, ax
-  sub di, di
-  mov ax, 0
-  mov cx, $8000
-  cld
-  rep stosw
-
-  { [re] CRTC 14 bit 6 off is doubleword addressing off; CRTC 17 bit 6 on is
-    byte mode; CRTC 13 is the Offset register and takes LineWidth. }
-  mov dx, $03D4
-  mov al, $14
-  out dx, al
-  inc dx
-  in  al, dx
-  and al, $BF
-  out dx, al
-  dec dx
-  mov al, $17
-  out dx, al
-  inc dx
-  in  al, dx
-  or  al, $40
-  out dx, al
-
-  mov dx, $03D4
-  mov al, $13
-  out dx, al
-  inc dx
-  mov al, LineWidth
-  out dx, al
+  mov ax, $0013     { BIOS set-mode function, mode 13h }
+  int $10           { 320x200x256, chained -- the next 40 lines unchain it }
+  mov dx, $03C4     { Sequencer index port }
+  mov al, 4         { index 4, Memory Mode }
+  out dx, al        { select it }
+  inc dx            { 3C5, the Sequencer data port }
+  in  al, dx        { read Memory Mode back }
+  and al, $F7       { clear bit 3, Chain-4 -- THE point of this routine }
+  or  al, $04       { set bit 2, Odd/Even disable, so planes are sequential }
+  out dx, al        { write it back }
+  mov dx, $03CE     { Graphics Controller index port }
+  mov al, 5         { index 5, Graphics Mode }
+  out dx, al        { select it }
+  inc dx            { 3CF, the data port }
+  in  al, dx        { read Graphics Mode }
+  and al, $EF       { clear bit 4, the odd/even addressing mode }
+  out dx, al        { write it back }
+  dec dx            { back to the index port }
+  mov al, 6         { index 6, Miscellaneous }
+  out dx, al        { select it }
+  inc dx            { data port again }
+  in  al, dx        { read Miscellaneous }
+  and al, $FD       { clear bit 1, chain odd/even }
+  out dx, al        { write it back }
+  mov dx, $03C4     { Sequencer index port once more }
+  mov ax, $0F02     { AL=2 selects Map Mask, AH=0F opens all four planes }
+  out dx, ax        { 16-bit out writes index and data together }
+  mov ax, $A000     { the VGA display segment }
+  mov es, ax        { ES addresses video memory }
+  sub di, di        { DI := 0, the start of the segment }
+  mov ax, 0         { the value to clear with }
+  mov cx, $8000     { 32768 words -- the whole 64K }
+  cld               { forwards }
+  rep stosw         { with all four planes open this clears every one at once }
+  mov dx, $03D4     { CRTC index port }
+  mov al, $14       { index 14h, Underline Location }
+  out dx, al        { select it }
+  inc dx            { 3D5, the CRTC data port }
+  in  al, dx        { read it }
+  and al, $BF       { clear bit 6, doubleword addressing }
+  out dx, al        { write it back }
+  dec dx            { index port }
+  mov al, $17       { index 17h, CRTC Mode Control }
+  out dx, al        { select it }
+  inc dx            { data port }
+  in  al, dx        { read it }
+  or  al, $40       { set bit 6 -- byte mode, not word mode }
+  out dx, al        { write it back }
+  mov dx, $03D4     { CRTC index port }
+  mov al, $13       { index 13h, the Offset register }
+  out dx, al        { select it }
+  inc dx            { data port }
+  mov al, LineWidth { the logical line width, in WORDS }
+  out dx, al        { so the byte stride per line is twice this }
 end;
 
 procedure SetPlane;
@@ -118,13 +129,17 @@ begin
     the original walks the pair with `inc dx`. That is hand-written, so it is
     transcribed rather than re-expressed. }
   plane := 1 shl plane;
+  { EQUIVALENT PASCAL, reference only:
+        Port[$3C4] := 2;  Port[$3C5] := plane;
+    That is NOT what the original emits -- it reloads DX for each port,
+    where the original steps with `inc dx`, so this is transcribed. }
   asm
-    mov dx, $03C4
-    mov al, 2
-    out dx, al
-    inc dx
-    mov al, plane
-    out dx, al
+    mov dx, $03C4 { Sequencer index port }
+    mov al, 2     { index 2, Map Mask }
+    out dx, al    { select it }
+    inc dx        { 3C5, the data port -- the original steps rather than reloads }
+    mov al, plane { the 1-shl-plane bit computed above }
+    out dx, al    { only that plane will accept writes now }
   end;
 end;
 
