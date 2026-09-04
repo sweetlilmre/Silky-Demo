@@ -1,0 +1,36 @@
+# Reading the DGROUP VARIABLE layout out of the linked image, for linkcmp.py.
+#
+# The file size and the initialised data already match; what is left is 1584
+# bytes of uninitialised data this reconstruction has not declared, which
+# shifts every variable offset baked into an instruction. This config asks
+# linkcmp to pair those operands up and report the shifts.
+
+image = "SILKY.EXE"
+map   = "SILKY.MAP"
+
+# Below this offset a DGROUP address is a typed constant, not a variable: the
+# initialised head runs 0x000..0x31f and is already byte-identical.
+varbase = 0x0320
+# The far end of the data group. The original's stack sits at paragraph 0x786
+# above the load base, so DGROUP cannot reach past there.
+datalen = 0x7860
+maxdelta = 8192
+skip = []
+
+[[segment]]
+at = 0x1000
+unit = "SILKY"
+[[segment]]
+at = 0x112f
+unit = "MODEX"
+[[segment]]
+at = 0x113c
+unit = "PALETTE"
+[[segment]]
+at = 0x1144
+unit = "CRT"
+[[segment]]
+at = 0x11a6
+unit = "SYSTEM"
+[[segment]]
+at = 0x1247
