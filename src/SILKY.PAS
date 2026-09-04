@@ -46,7 +46,10 @@ program Silky;
 uses Crt, Palette, ModeX;
 
 type
-  { [re] Named by BARS.INC, which declares Tmp : Array[1..16] of RGBt. }
+  { One palette entry: red, green and blue, each 0 to 63 as the VGA's DAC
+    wants them.
+
+    [re] Named by BARS.INC, which declares Tmp : Array[1..16] of RGBt. }
   RGBt = record
     r, g, b : Byte;
   end;
@@ -62,7 +65,11 @@ type
   TFont = array[32..90, 1..16, 1..16] of Byte;
 
 const
-  { [re] DGROUP 0x00..0xED. A leading Word, then one record per character --
+  { Where each glyph ends up once ShowFont has drawn it. Ofs is its address
+    in video memory and Wid is how far the scroll advances past it, so a
+    narrow letter takes less room on screen than a wide one.
+
+    [re] DGROUP 0x00..0xED. A leading Word, then one record per character --
     the scroller computes (Glyph-32)*4+2 and dereferences with NO base, so the
     array starts at offset 2 and the Word sits at 0. 2 + 59*4 = 238 = 0xEE,
     which is exactly where Line1 begins, so the three abut with nothing spare.
@@ -132,7 +139,11 @@ const
     ( Ofs : 17085; Wid : 17 )   { 'Y' },
     ( Ofs : 17090; Wid : 17 )   { 'Z' } );
 
-  { [re] ONE ARRAY, not six separate constants. The originals sit 0x51 apart
+  { The scrolltext, in six lines of eighty characters. Main copies them into
+    Text end to end and RunScroll walks that, so the six read as one message
+    with no break between them.
+
+    [re] ONE ARRAY, not six separate constants. The originals sit 0x51 apart
     -- a length byte plus eighty characters, with NO padding between them --
     and six standalone String[80] constants come out 82 bytes each, because
     Turbo Pascal word-aligns the next item after an odd-sized one. Array
@@ -149,7 +160,10 @@ const
     ' BEST WISHES FOR ''93. HAVE A GOOD ONE.......... A S P H Y X I A   R U L Z !!!!!!',
     '                                                                                ' );
 
-  { [re] A TYPED CONSTANT, not a var. bin/BARS.INC carries it commented out at
+  { The five colours the bars are drawn in. StartPal clears this to zero
+    before it is used, so the values written here never reach the screen.
+
+    [re] A TYPED CONSTANT, not a var. bin/BARS.INC carries it commented out at
     the foot of the file -- PalCol : Array[1..5] of Byte = (0,30,40,50,60) --
     and the original's initialised data has exactly those bytes at 0x2d4,
     which is where Lines ends. Declared as a var it read as four zero bytes.
@@ -157,7 +171,16 @@ const
   PalCol : array[1..5] of Byte = (0,30,40,50,60);
 
 var
-  { [re] DECLARATION ORDER IS THE ORIGINAL'S DGROUP ORDER, read straight off
+  { The program's state, all of it. The counters and the three Value bytes
+    drive the palette animation in BARS.INC; T is the palette itself, one
+    entry per colour; Text is the scrolltext once the six lines have been
+    copied into it, and the rest belongs to the scroller.
+
+    THE ORDER OF THIS BLOCK IS NOT ARBITRARY, in the same way the uses clause
+    is not: Turbo Pascal allocates globals in the order they are declared, so
+    the list decides where each one lives. Rearranging it changes the program.
+
+    [re] Declaration order is the original's DGROUP order, read straight off
     the addresses in the binary. Turbo Pascal allocates globals in the order
     they are declared, so this list IS the layout:
 
@@ -167,7 +190,7 @@ var
       062e ScrollDone  062f Glyph  0630 Width   0632 ScrollX
       0634 Text (480)              0814 Loop    0816 LineWidth (ModeX's)
 
-    Getting this wrong costs nothing visible and everything measurable: the
+    [re] Getting this wrong costs nothing visible and everything measurable: the
     code is identical either way and every instruction that names a global
     carries a different displacement, so a correct routine reads as wrong. }
   Count, Count2, Count3 : Byte;
@@ -727,6 +750,10 @@ asm
 end;
 
 
+{ THE WHOLE DEMO, in the order it happens: read the font, go to Mode X, flash
+  the screen white and fade it to black, split the screen so the top half can
+  scroll, draw the font and the two pictures, join the six lines of scrolltext
+  into one, start the colour bars and then scroll to the end. }
 begin
   { [re] 1000:11ad, the original main block. }
   LoadFont;

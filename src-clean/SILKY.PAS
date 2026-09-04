@@ -27,6 +27,8 @@ program Silky;
 uses Crt, Palette, ModeX;
 
 type
+  { One palette entry: red, green and blue, each 0 to 63 as the VGA's DAC
+    wants them. }
   RGBt = record
     r, g, b : Byte;
   end;
@@ -36,6 +38,9 @@ type
   TFont = array[32..90, 1..16, 1..16] of Byte;
 
 const
+  { Where each glyph ends up once ShowFont has drawn it. Ofs is its address
+    in video memory and Wid is how far the scroll advances past it, so a
+    narrow letter takes less room on screen than a wide one. }
   Glyphs : array[32..90] of record
     Ofs, Wid : Word;
   end = (
@@ -99,6 +104,9 @@ const
     ( Ofs : 17085; Wid : 17 )   { 'Y' },
     ( Ofs : 17090; Wid : 17 )   { 'Z' } );
 
+  { The scrolltext, in six lines of eighty characters. Main copies them into
+    Text end to end and RunScroll walks that, so the six read as one message
+    with no break between them. }
   Lines : array[1..6] of String[80] = (
     '                   HAPPY BIRTHDAY SILKY, HERE''S WISHING U A GR8 18TH!!! ALL THE ',
     'BEST FROM ASPHYXIA!!!         *   HEHE NOW U R LEGAL!!!   *                     ',
@@ -107,9 +115,19 @@ const
     ' BEST WISHES FOR ''93. HAVE A GOOD ONE.......... A S P H Y X I A   R U L Z !!!!!!',
     '                                                                                ' );
 
+  { The five colours the bars are drawn in. StartPal clears this to zero
+    before it is used, so the values written here never reach the screen. }
   PalCol : array[1..5] of Byte = (0,30,40,50,60);
 
 var
+  { The program's state, all of it. The counters and the three Value bytes
+    drive the palette animation in BARS.INC; T is the palette itself, one
+    entry per colour; Text is the scrolltext once the six lines have been
+    copied into it, and the rest belongs to the scroller.
+
+    THE ORDER OF THIS BLOCK IS NOT ARBITRARY, in the same way the uses clause
+    is not: Turbo Pascal allocates globals in the order they are declared, so
+    the list decides where each one lives. Rearranging it changes the program. }
   Count, Count2, Count3 : Byte;
   GlobCount : Word;
   Fading : Byte;
@@ -528,6 +546,10 @@ asm
 end;
 
 
+{ THE WHOLE DEMO, in the order it happens: read the font, go to Mode X, flash
+  the screen white and fade it to black, split the screen so the top half can
+  scroll, draw the font and the two pictures, join the six lines of scrolltext
+  into one, start the colour bars and then scroll to the end. }
 begin
   LoadFont;
   ScnPos := 0;
