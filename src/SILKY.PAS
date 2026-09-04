@@ -15,7 +15,13 @@ program Silky;
   from DeltaPal at 002b through StartPal at 095e -- the include's declaration
   order IS the segment order, which is one of the reasons to believe it. }
 
-uses ModeX, Palette, Crt;
+{ [re] THE CLAUSE IS IN REVERSE OF THE SEGMENT ORDER, deliberately. Turbo
+  Pascal 6 lays the units out backwards from the order they are named: with
+  ModeX, Palette, Crt the map came out SILKY, CRT, PALETTE, MODEX, while the
+  original is SILKY, MODEX, PALETTE, Crt. Naming them backwards puts them
+  right. The wiki says this of typed constants in DGROUP; here it governs the
+  CODE segments too, and getting it wrong misplaces every unit at once. }
+uses Crt, Palette, ModeX;
 
 type
   { [re] Named by BARS.INC, which declares Tmp : Array[1..16] of RGBt. }
