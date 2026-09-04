@@ -6,16 +6,40 @@
 # [plan] is DECIDED: investigation order is the priority order.
 
 [coverage]
-targets = 2
+targets = 11
 
 [routine."SILKY.DeltaPal"]
 matched = 28
 
+[routine."SILKY.Drawit"]
+matched = 267
+
 [routine."SILKY.GotoScnPos"]
 matched = 29
 
+[routine."SILKY.PlayPal"]
+matched = 787
+
+[routine."SILKY.RotPal0"]
+matched = 424
+
+[routine."SILKY.RotPal1"]
+matched = 424
+
+[routine."SILKY.RotPal2"]
+matched = 162
+
+[routine."SILKY.RotPal3"]
+matched = 162
+
+[routine."SILKY.StartPal"]
+matched = 157
+
 [routine."SILKY.WaitRetrace"]
 matched = 14
+
+[routine."SILKY.rotpal"]
+matched = 90
 
 [[plan.investigation]]
 name = "unidentified-units-112f-113c"
@@ -67,7 +91,8 @@ resolution = "Identical at 202 of 202 bytes. Recorded as an investigation and re
 [[plan.investigation]]
 name = "barsinc-names-the-palette-routines"
 finding = "bin/BARS.INC contains Pascal for all five palette routines and every structural detail agrees with the reading derived from bytes beforehand. RotPal0 is 02a1, RotPal1 is 0449, RotPal2 is 015d, RotPal3 is 01ff, rotpal is the dispatcher at 05f1 with the identical case arms and wrap, StartPal is the builder at 064b. GlobCount is [0x320] and T is the palette at [0x328], an array[0..255] of RGBt indexed from 1, which is why the measured band addresses came out at t+3 and t+48. The include is therefore substantially the real source even though its DeltaPal does not match. NEXT: with the toolchain proven and MODEX identical, bring these routines into SILKY.PAS one at a time and let the byte comparison decide each. WaitRetrace at 1000:0000 and DeltaPal at 1000:002b are the first two routines in the program segment, so a prefix comparison starts paying immediately. This needs a blocks config and program_blocks in link.toml, because the program emits no TPU and blockcmp rather than units.py is what measures it."
-state = "open"
+state = "resolved"
+resolution = "Superseded by later work in this session and closed for tidiness rather than by its own measurement -- see program-segment-complete and binary-identical-but-for-the-guard, which carry the finished numbers."
 
 [[plan.investigation]]
 name = "swapped-playpal-startpal"
@@ -84,7 +109,8 @@ resolution = "Understood and worked around: main now calls the transcribed routi
 [[plan.investigation]]
 name = "first-three-program-routines-identical"
 finding = "WaitRetrace at 1000:0000, GotoScnPos at 1000:000e and DeltaPal at 1000:002b are transcribed and rebuild to 69 of 71 bytes identical. The only two differences are DGROUP variable addresses: mov bx,ScnPos is 8b 1e 2c 06 against our 8b 1e 44 03, and lea si,T is 8d 36 28 03 against our 8d 36 44 00. Our DGROUP is smaller because almost nothing is declared yet, so those two converge as the reconstruction grows; every instruction byte already agrees. NOTABLE: DeltaPal matches using the transcription taken from the BINARY -- lodsb, out dx al, loop -- and not bin/BARS.INC, which writes rep outsb there. That is independent confirmation of barsinc-differs-from-binary, obtained by building rather than by reading."
-state = "open"
+state = "resolved"
+resolution = "Superseded by later work in this session and closed for tidiness rather than by its own measurement -- see program-segment-complete and binary-identical-but-for-the-guard, which carry the finished numbers."
 
 [[plan.investigation]]
 name = "transcribe-the-rest-of-barsinc"
@@ -125,12 +151,14 @@ resolution = "Fixed in kit d5ab9c2 with wiki/observations/annotation-counted-the
 [[plan.investigation]]
 name = "markers-blocked-until-rtl-converges"
 finding = "Eight of the eleven transcribed routines cannot carry an @asm marker yet. routines.py walks a routines bytes and stops at the first it cannot forgive, and for every FRAMED routine here that byte is the far call to the stack check at 11a6:04df: our System segment is at 0x00b80 and 1811 bytes long against the originals 2576, so the call target differs. All eight report SHORT at 6 or 7 bytes while being correct -- 2544 bytes across the run measure zero unexplained once relocation and DGROUP placement are accounted for, and that was checked against the MZ relocation table rather than against the same rule twice. They are held back rather than marked because a check list red for eight known-good routines is a check nobody reads, which is how a real regression hides. Marked: WaitRetrace, GotoScnPos and DeltaPal, all assembler with no stack check in the prologue, all three now LOCKED. This closes when the RTL converges, which is a consequence of transcribing more rather than a task of its own."
-state = "open"
+state = "resolved"
+resolution = "UNBLOCKED, and the RTL converging was only half of it. All eleven routines are now marked and LOCKED with zero holes each. Two things had to happen. The link layout converged -- Crt and System are byte-identical in the image and every segment starts where the originals does -- so the stack-check far call in each prologue matches and the byte search finds the routine. And a kit defect had to be fixed: RotPal1 located RotPal0s body, because align.locate scored candidate positions by length alone and the two are 92 percent identical sharing their first ten bytes, so both alignments reached 424 bytes and the tie went to the lower address. It reported 32 holes on a routine that is byte-identical at its own address. Fixed in kit 022436b by keeping the hole count walk already returns and preferring fewer when lengths tie, with wiki/observations/tie-break-keeps-the-worse-match beside it, and checked against both other consumers before pushing since align sits under every instrument."
 
 [[plan.investigation]]
 name = "clampdown-entry-construct"
 finding = "ClampDown at 09fb is transcribed and its BODY is right -- 156 bytes with zero unexplained once DGROUP addresses are accounted for -- but the two-byte entry construct is not. The original emits cmp byte [0x322],1 then jne to a trampoline that jmps near to the epilogue, with a short jmp over the trampoline to the body: seven bytes. `if Fading = 1 then begin ... end` emits the compact je over the near jmp: five. The near displacement e9 9a 00 is identical in both, so the body length already matches and only the branch form differs; the two-byte shift is what makes the whole routine read as 125 unexplained. A single-arm case was tried and is worse -- it loads through AL rather than comparing memory directly. TP600 and TP601 were both built and produce IDENTICAL output across the whole 2726-byte run, so the patch level is not the cause and that question is settled as indistinguishable on this corpus so far."
-state = "open"
+state = "resolved"
+resolution = "Duplicate of clampdown-guard-is-not-an-if, which carries the sixteen constructs and the compiler hypothesis."
 
 [[plan.investigation]]
 name = "clampdown-guard-is-not-an-if"
@@ -159,7 +187,8 @@ resolution = "Zero real differences at 700 bytes. blockcmp now reports 19 of 20 
 [[plan.investigation]]
 name = "consult-the-wiki-before-hypothesising"
 finding = "THIRD instance of rediscovering something the kit already holds, and this one is the sharpest. The Inc(X,20) finding is wiki/observations/inc-is-not-an-assignment, written 25 Aug 2026, and its description names the exact consequence that was hit: a reconstruction that picks the shorter one shifts every byte after it in the segment, and the coverage walk blames somewhere else. That is precisely what happened -- one wrong statement form at +0x151 displaced the rest of a 700-byte routine. The earlier two were verdiff.py, caught before anything was written, and blockcmp.py, not caught until two scratchpad scripts existed. The pattern is that the wiki index is consulted when a question is already framed as a general one, and not when it looks like a local puzzle about these particular bytes. The cheap habit is the opposite: grep wiki/index.md and the source-shape tag BEFORE hypothesising about codegen. Twelve observations carry that tag and several are exactly this kind of finding."
-state = "open"
+state = "resolved"
+resolution = "Habit adopted and it paid the same session: the wiki was checked BEFORE writing Scroll, which is how the dead `mov dx,3` at 0f82 was transcribed rather than dropped -- the-original-does-nothing names exactly that. Left as a resolved row rather than deleted, because the three instances it records are the evidence for the habit."
 
 [[plan.investigation]]
 name = "scroll-transcribed"
@@ -182,7 +211,8 @@ resolution = "100 percent of the code segment and an identical data group. What 
 [[plan.investigation]]
 name = "dgroup-layout-is-what-remains"
 finding = "THE FILE SIZE NOW MATCHES EXACTLY -- 10704 bytes, and the initialised data group is identical -- so what is left is the UNINITIALISED half. The MZ header says it precisely: minalloc is 2317 paragraphs against our 2218, a shortfall of 99 paragraphs or 1584 bytes, and ss differs by the same 99. So this reconstruction declares 1584 bytes fewer of BSS than the original. Every DGROUP variable therefore sits at a different offset, which is what the 4293 differing image bytes are: not wrong code, but right code addressing a differently laid out data group. The other header difference is ip, 4510 against 4508, which is ClampDowns two bytes and nothing else. The kit has instruments for this: dsgaps.py sorts the DS addresses the sources comments record and prints the gap to the next, which is the size of whatever sits at the first, and dgroup.py and linkcmp.py read variable placement out of a linked image. The wikis dgroup-order-reverses-uses is the page to read before rearranging declarations. Closing this closes the whole binary."
-state = "open"
+state = "resolved"
+resolution = "Superseded by later work in this session and closed for tidiness rather than by its own measurement -- see program-segment-complete and binary-identical-but-for-the-guard, which carry the finished numbers."
 
 [[plan.investigation]]
 name = "dgroup-shortfall-is-distributed"

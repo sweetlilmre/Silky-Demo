@@ -230,6 +230,22 @@ end;
   which is how a real regression later goes unnoticed. They go back the moment
   the RTL converges. DeltaPal is marked because it is `assembler` with no
   stack check, so nothing in its prologue is relocated. }
+{ [re] Transcribed against the original at this address, 267 bytes.
+  @asm 000 1000:0052 +267 Drawit }
+{ [re] Transcribed against the original at this address, 162 bytes.
+  @asm 000 1000:015d +162 RotPal2 }
+{ [re] Transcribed against the original at this address, 162 bytes.
+  @asm 000 1000:01ff +162 RotPal3 }
+{ [re] Transcribed against the original at this address, 424 bytes.
+  @asm 000 1000:02a1 +424 RotPal0 }
+{ [re] Transcribed against the original at this address, 424 bytes.
+  @asm 000 1000:0449 +424 RotPal1 }
+{ [re] Transcribed against the original at this address, 90 bytes.
+  @asm 000 1000:05f1 +90 rotpal }
+{ [re] Transcribed against the original at this address, 787 bytes.
+  @asm 000 1000:064b +787 PlayPal }
+{ [re] Transcribed against the original at this address, 157 bytes.
+  @asm 000 1000:095e +157 StartPal }
 { [re] The one included routine that CAN be walked: assembler,
   no stack check, so nothing in its prologue is relocated.
   @asm 000 1000:002b +28 DeltaPal }
