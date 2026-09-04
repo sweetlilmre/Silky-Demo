@@ -8,6 +8,9 @@
 [coverage]
 targets = 2
 
+[routine."SILKY.DeltaPal"]
+matched = 28
+
 [routine."SILKY.GotoScnPos"]
 matched = 29
 
@@ -23,7 +26,8 @@ resolution = "Both read in full by disassembly, no sibling binary involved. 112f
 [[plan.investigation]]
 name = "no-linker-map-yet"
 finding = "Every address in link.toml comes from the MZ relocation table, and the blind spot is a unit no fixup names: a segment base only appears there if something refers to it across a segment boundary, so a unit never entered from outside its own segment sits inside its neighbours extent with nothing reporting it. A linker map is what settles it. This closes when src/ holds a program that builds and build/SILKY.MAP exists, at which point link.toml segments and the map segment table can be compared."
-state = "open"
+state = "resolved"
+resolution = "build/SILKY.MAP exists and mapcmp reads it. The blind spot it named -- a unit no fixup names, invisible to the relocation-table method -- is closed for what has been built: the maps segment table lists SILKY, PALETTE, MODEX, SYSTEM and DATA, matching the five the fixups gave, with Crt absent because nothing references it yet. The maps Publics by Value also confirms our routines land at the ORIGINALS offsets: WAITRETRACE 0000, GOTOSCNPOS 000E, DELTAPAL 002B, DRAWIT 0052, ROTPAL2 015D, ROTPAL3 01FF, ROTPAL0 02A1. mapcmp reports MODEX and PALETTE exact on length and SILKY short by 2240 bytes of routines nothing references yet."
 
 [[plan.investigation]]
 name = "table-at-dgroup-0717"
@@ -114,3 +118,8 @@ name = "segdoc-annotation-trap"
 finding = "This project hit it and it is now fixed in the kit at d5ab9c2. segdoc.py --check counted a second table in docs/00-map.md as segment rows and reported 14 rows on disk against 6 computed, and the remedy it printed -- the regenerate line in the files own header -- would have replaced the whole document with the generated table. The Crt reading was moved to docs/01-crt.md at the time to get out of the way; with the fix in, a second table in 00-map.md would be safe again. Left as a note rather than moving it back: two documents is the better shape anyway."
 state = "resolved"
 resolution = "Fixed in kit d5ab9c2 with wiki/observations/annotation-counted-then-overwritten alongside it. Verified four ways: a second table no longer reports drift, a write to an annotated file is refused with the file intact, a genuinely wrong size is still caught and still exits 1, and a fresh file still generates and regenerates."
+
+[[plan.investigation]]
+name = "markers-blocked-until-rtl-converges"
+finding = "Eight of the eleven transcribed routines cannot carry an @asm marker yet. routines.py walks a routines bytes and stops at the first it cannot forgive, and for every FRAMED routine here that byte is the far call to the stack check at 11a6:04df: our System segment is at 0x00b80 and 1811 bytes long against the originals 2576, so the call target differs. All eight report SHORT at 6 or 7 bytes while being correct -- 2544 bytes across the run measure zero unexplained once relocation and DGROUP placement are accounted for, and that was checked against the MZ relocation table rather than against the same rule twice. They are held back rather than marked because a check list red for eight known-good routines is a check nobody reads, which is how a real regression hides. Marked: WaitRetrace, GotoScnPos and DeltaPal, all assembler with no stack check in the prologue, all three now LOCKED. This closes when the RTL converges, which is a consequence of transcribing more rather than a task of its own."
+state = "open"

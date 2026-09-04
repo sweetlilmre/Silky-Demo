@@ -92,6 +92,27 @@ end;
   artefact untouched; this copy is part of the reconstruction and may be
   edited where the binary disagrees with it. Five of its routines already
   rebuild with zero unexplained bytes -- see docs/04-palette-animation.md. }
+{ [re] THE MARKERS FOR THE INCLUDED ROUTINES LIVE HERE, not in the
+  include. marker.py globs *.PAS, so a marker inside a .INC is never
+  read -- nine of them sat there for one build and routines.py went on
+  reporting two. A marker above an include line is shared and must name
+  its routine, which is exactly what marker.py's docstring says.
+
+  ONLY DELTAPAL IS MARKED, and the other eight are held back deliberately.
+  routines.py walks a routine's bytes and stops at the first it cannot forgive.
+  For every FRAMED routine here that byte is the far call to the stack check at
+  11a6:04df, because our System segment has not landed where the original's is
+  -- the map puts ours at 0x00b80 and it is 1811 bytes against the original's
+  2576. So all eight report SHORT at 6 or 7 bytes while being correct: 2544
+  bytes across the run measure zero unexplained once relocation and DGROUP
+  placement are accounted for, checked against the MZ relocation table.
+  Marking them would leave the check list red for eight known-good routines,
+  which is how a real regression later goes unnoticed. They go back the moment
+  the RTL converges. DeltaPal is marked because it is `assembler` with no
+  stack check, so nothing in its prologue is relocated. }
+{ [re] The one included routine that CAN be walked: assembler,
+  no stack check, so nothing in its prologue is relocated.
+  @asm 000 1000:002b +28 DeltaPal }
 {$I BARS.INC}
 
 begin
