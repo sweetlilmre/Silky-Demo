@@ -63,3 +63,24 @@ A **640-frame cycle in four phases** — 200, 120, 200, 120. `[0x320]` is the ph
 ## Left unsettled
 
 The 3-byte save and restore counts in `015d` and `01ff` were not recovered by the scan that found the `336`, so the exact save/restore slots in that pair are read from the pattern of the other pair rather than measured directly. The band arithmetic itself is measured.
+
+## The original names, recovered
+
+`bin/BARS.INC` holds Pascal for all five of these routines. It was read **after** the reading above was derived from bytes, and every structural detail agrees — so this is a confirmation, not a source.
+
+| segment offset | this document called it | `BARS.INC` calls it |
+|---|---|---|
+| `02a1` | rotate within each band, forward | `RotPal0` |
+| `0449` | rotate within each band, backward | `RotPal1` |
+| `015d` | rotate the whole range forward | `RotPal2` |
+| `01ff` | rotate the whole range backward | `RotPal3` |
+| `05f1` | the dispatcher | `rotpal` |
+| `064b` | the palette builder | `StartPal` |
+| `[0x320]` | the phase counter | `GlobCount` |
+| `[0x328]` | the palette buffer | `T`, an `array[0..255] of RGBt` |
+
+The source confirms each measured number: `15*3` is the 45-byte band shift, `336` is the whole-range move, the bands are 16 colours, there are eight of them, and the `case` arms are `1..200`, `201..320`, `321..520`, `521..640` with the wrap at 640 — dispatching `rotpal0`, `rotpal2`, `rotpal1`, `rotpal3` in that order, which is exactly the order the call sites gave.
+
+**The array is 0-based and used 1-based.** `T` sits at `0x328` and the code indexes `T[1]` upward, so `T[1]` is `0x32b` and `T[16]` is `0x358` — which is why the measured band addresses came out at `t+3` and `t+48`. `DeltaPal`'s `lea si,t` is `0x328`, the whole 256-colour buffer.
+
+**This does not make `BARS.INC` ground truth.** Its `DeltaPal` still does not match the binary — see `barsinc-differs-from-binary`. What it is now is a set of testable hypotheses: with the toolchain proven and `MODEX` rebuilt byte-identically, each routine it contains can be compiled and compared, and the byte comparison decides whether that routine is the one this binary was built from.
