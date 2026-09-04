@@ -1,0 +1,2 @@
+# Assembler files exempt from the shared-asm gate.
+# Empty: nothing has been transcribed yet, so nothing can be exempt.

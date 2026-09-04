@@ -75,8 +75,10 @@ end;
 
 { EQUIVALENT PASCAL, reference only:
     Port[$3C8] := col;  Port[$3C9] := r;  Port[$3C9] := g;  Port[$3C9] := b;
-  That is NOT what the original emits -- it loads DX once and steps to the
-  data port with `inc dx`, so the body is transcribed rather than written. }
+
+  [re] That is not what the original emits: Port[] reloads DX for each port
+  where the original loads it once and steps with `inc dx`, so the body below
+  is transcribed rather than written. }
 procedure SetPalette(col, r, g, b : Byte);
 begin
   asm

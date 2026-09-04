@@ -2,6 +2,7 @@
 .mcp.json
 .venv
 build/
+build-clean/
 work/
 
 # Machine paths. Never committed -- kit.toml's committed half says WHERE things

@@ -1,49 +1,19 @@
 {$X+}
-{ [re] EXTENDED SYNTAX, and it is required rather than stylistic. RunScroll
-  calls Crt's ReadKey as a statement and throws the result away, which Turbo
-  Pascal refuses without it -- 1144:030d is a FUNCTION, int 16h with ah=0
-  returning the key in AL, and nothing at the call site consumes it. $X is a
-  global directive and will not compile part-way down a file. }
 
 program Silky;
 
-{ The 1993 Asphyxia demo, written for Silky's eighteenth birthday.
+{ The 1993 Asphyxia demo, written for Silky's eighteenth birthday. }
 
-  [re] Original program segment 1000, 4848 bytes, charted in docs/03-program.md.
-  Routines are emitted in source order, so this file's order is fixed by the
-  original's layout: WaitRetrace 0000, gotoscnpos 000e, then BARS.INC's own run
-  from DeltaPal at 002b through StartPal at 095e -- the include's declaration
-  order IS the segment order, which is one of the reasons to believe it. }
-
-{ [re] THE CLAUSE IS IN REVERSE OF THE SEGMENT ORDER, deliberately. Turbo
-  Pascal 6 lays the units out backwards from the order they are named: with
-  ModeX, Palette, Crt the map came out SILKY, CRT, PALETTE, MODEX, while the
-  original is SILKY, MODEX, PALETTE, Crt. Naming them backwards puts them
-  right. The wiki says this of typed constants in DGROUP; here it governs the
-  CODE segments too, and getting it wrong misplaces every unit at once. }
 uses Crt, Palette, ModeX;
 
 type
-  { [re] Named by BARS.INC, which declares Tmp : Array[1..16] of RGBt. }
   RGBt = record
     r, g, b : Byte;
   end;
 
-  { [re] The bounds come from the blitter's folded subscript at 0cb1, which
-    biases by 0x2011 = 32*256 + 1*16 + 1. 59 characters of 16 by 16 is 15104
-    bytes, which is both SizeOf pushed to New at 0ac9 and the size of
-    bin/GOLD.FNT on disk. Characters 32 to 90 is space through Z, which is the
-    whole of what an all-caps scrolltext needs. }
   TFont = array[32..90, 1..16, 1..16] of Byte;
 
 const
-  { [re] DGROUP 0x00..0xED. A leading Word, then one record per character --
-    the scroller computes (Glyph-32)*4+2 and dereferences with NO base, so the
-    array starts at offset 2 and the Word sits at 0. 2 + 59*4 = 238 = 0xEE,
-    which is exactly where Line1 begins, so the three abut with nothing spare.
-    Ofs is a real video-memory address: char 32 is 1040 = 320*3 + 80, the
-    top-left of where ShowFont drew it, and every one of the 59 agrees with
-    that placement. Values are read out of the original's initialised data. }
   Glyphs : array[32..90] of record
     Ofs, Wid : Word;
   end = (
@@ -107,15 +77,6 @@ const
     ( Ofs : 17085; Wid : 17 )   { 'Y' },
     ( Ofs : 17090; Wid : 17 )   { 'Z' } );
 
-  { [re] ONE ARRAY, not six separate constants. The originals sit 0x51 apart
-    -- a length byte plus eighty characters, with NO padding between them --
-    and six standalone String[80] constants come out 82 bytes each, because
-    Turbo Pascal word-aligns the next item after an odd-sized one. Array
-    elements pack, so the array reproduces the spacing. Main's code folds the
-    subscript to a fixed base per line, which is why the disassembly shows
-    0xee, 0x13f, 0x190, 0x1e1, 0x232 and 0x283 rather than an index.
-    The text is read out of the ORIGINAL's initialised data, so the trailing
-    spaces are the author's own. }
   Lines : array[1..6] of String[80] = (
     '                   HAPPY BIRTHDAY SILKY, HERE''S WISHING U A GR8 18TH!!! ALL THE ',
     'BEST FROM ASPHYXIA!!!         *   HEHE NOW U R LEGAL!!!   *                     ',
@@ -124,27 +85,9 @@ const
     ' BEST WISHES FOR ''93. HAVE A GOOD ONE.......... A S P H Y X I A   R U L Z !!!!!!',
     '                                                                                ' );
 
-  { [re] A TYPED CONSTANT, not a var. bin/BARS.INC carries it commented out at
-    the foot of the file -- PalCol : Array[1..5] of Byte = (0,30,40,50,60) --
-    and the original's initialised data has exactly those bytes at 0x2d4,
-    which is where Lines ends. Declared as a var it read as four zero bytes.
-    StartPal FillChars it to zero at run time, which a typed constant permits. }
   PalCol : array[1..5] of Byte = (0,30,40,50,60);
 
 var
-  { [re] DECLARATION ORDER IS THE ORIGINAL'S DGROUP ORDER, read straight off
-    the addresses in the binary. Turbo Pascal allocates globals in the order
-    they are declared, so this list IS the layout:
-
-      031c Count, Count2, Count3   031f pad     0320 GlobCount
-      0322 Fading   0323 Bright    0324 Value, Value2, Value3   0327 pad
-      0328 T (768)                 0628 Font    062c ScnPos
-      062e ScrollDone  062f Glyph  0630 Width   0632 ScrollX
-      0634 Text (480)              0814 Loop    0816 LineWidth (ModeX's)
-
-    Getting this wrong costs nothing visible and everything measurable: the
-    code is identical either way and every instruction that names a global
-    carries a different displacement, so a correct routine reads as wrong. }
   Count, Count2, Count3 : Byte;
   GlobCount : Word;
   Fading : Byte;
@@ -160,11 +103,6 @@ var
   Text : array[1..480] of Char;
   Loop : Word;
 
-{ [re] 1000:0000, 14 bytes. Called NEAR by DeltaPal -- `e8` with no `push cs`
-  at 1000:002e -- so it is local, not far. BARS.INC calls it but does not
-  declare it. }
-{ [re] Transcribed from the original at this address, 14 bytes.
-  @asm 000 1000:0000 +14 }
 procedure WaitRetrace; assembler;
 { EQUIVALENT PASCAL, reference only:
     repeat until (Port[$3DA] and 8) = 0;
@@ -181,11 +119,6 @@ asm
   jz  @InRetrace    { no -- spin. Falling through means retrace just began }
 end;
 
-{ [re] 1000:000e, 29 bytes. BARS.INC's StartPal opens with `gotoscnpos`, and
-  095e -- which is StartPal -- opens with a near call to 000e, so that is this
-  routine's original name. CRTC 0c and 0d are the start address, high then low. }
-{ [re] Transcribed from the original at this address, 29 bytes.
-  @asm 000 1000:000e +29 }
 procedure GotoScnPos; assembler;
 { EQUIVALENT PASCAL, reference only:
     ofs := ScnPos + $BB80;
@@ -208,53 +141,8 @@ asm
   out dx, al     { write it -- the display now starts here }
 end;
 
-{ [re] The original source, copied from bin/BARS.INC. bin/ holds the shipped
-  artefact untouched; this copy is part of the reconstruction and may be
-  edited where the binary disagrees with it. Five of its routines already
-  rebuild with zero unexplained bytes -- see docs/04-palette-animation.md. }
-{ [re] THE MARKERS FOR THE INCLUDED ROUTINES LIVE HERE, not in the
-  include. marker.py globs *.PAS, so a marker inside a .INC is never
-  read -- nine of them sat there for one build and routines.py went on
-  reporting two. A marker above an include line is shared and must name
-  its routine, which is exactly what marker.py's docstring says.
-
-  ONLY DELTAPAL IS MARKED, and the other eight are held back deliberately.
-  routines.py walks a routine's bytes and stops at the first it cannot forgive.
-  For every FRAMED routine here that byte is the far call to the stack check at
-  11a6:04df, because our System segment has not landed where the original's is
-  -- the map puts ours at 0x00b80 and it is 1811 bytes against the original's
-  2576. So all eight report SHORT at 6 or 7 bytes while being correct: 2544
-  bytes across the run measure zero unexplained once relocation and DGROUP
-  placement are accounted for, checked against the MZ relocation table.
-  Marking them would leave the check list red for eight known-good routines,
-  which is how a real regression later goes unnoticed. They go back the moment
-  the RTL converges. DeltaPal is marked because it is `assembler` with no
-  stack check, so nothing in its prologue is relocated. }
-{ [re] Transcribed against the original at this address, 267 bytes.
-  @asm 000 1000:0052 +267 Drawit }
-{ [re] Transcribed against the original at this address, 162 bytes.
-  @asm 000 1000:015d +162 RotPal2 }
-{ [re] Transcribed against the original at this address, 162 bytes.
-  @asm 000 1000:01ff +162 RotPal3 }
-{ [re] Transcribed against the original at this address, 424 bytes.
-  @asm 000 1000:02a1 +424 RotPal0 }
-{ [re] Transcribed against the original at this address, 424 bytes.
-  @asm 000 1000:0449 +424 RotPal1 }
-{ [re] Transcribed against the original at this address, 90 bytes.
-  @asm 000 1000:05f1 +90 rotpal }
-{ [re] Transcribed against the original at this address, 787 bytes.
-  @asm 000 1000:064b +787 PlayPal }
-{ [re] Transcribed against the original at this address, 157 bytes.
-  @asm 000 1000:095e +157 StartPal }
-{ [re] The one included routine that CAN be walked: assembler,
-  no stack check, so nothing in its prologue is relocated.
-  @asm 000 1000:002b +28 DeltaPal }
 {$I BARS.INC}
 
-{ [re] 1000:09fb, 191 bytes. Frames 2 bytes for a byte counter. Runs the whole
-  256-entry palette and clips every channel to Bright, then lowers Bright by
-  one -- so repeated calls walk the picture down to black without touching the
-  DAC directly, since DeltaPal is what uploads T. }
 procedure ClampDown;
 var
   Loop : Byte;
@@ -272,11 +160,6 @@ begin
 end;
 
 
-{ [re] 1000:0aba, 118 bytes. Frame 0x184 = 388: the File is at bp-0x80 so it is
-  declared first, and 260 bytes follow it that this routine never touches --
-  the same shape as Drawit's unused F. A String plus a LongInt makes 260
-  exactly; the composition is not recoverable from the frame size alone, only
-  the total is. }
 procedure LoadFont;
 var
   F     : File;
@@ -291,12 +174,6 @@ begin
 end;
 
 
-{ [re] 1000:0b30, 196 bytes. Frame 0x4e4 = 1252, which decomposes exactly:
-  File 128 at bp-0x80, then 800, then 320, then two words. The 800 is a CEL
-  header plus its 768-byte palette, and 20000 - 800 is 19200 = 320 * 60, which
-  is the 60 rows the outer loop counts. Line is ZERO-based: the fetch is
-  [bp+di-0x4e0] with di starting at 0, and a 1-based array would fold to
-  -0x4e1. Drawn 90 rows down. }
 procedure LoadCheck2;
 var
   F    : File;
@@ -316,12 +193,6 @@ begin
   Close(F);
 end;
 
-{ [re] 1000:0bf4, 189 bytes. Frame 0x408 = 1032: File 128, the same 800-byte
-  header, then only 100 and two words. 8800 - 800 is 8000 = 100 * 80, and the
-  outer loop runs 5 to 84, which is those 80 rows. Line is ONE-based here,
-  unlike Check2's: the fetch is [bp+di-0x405] with di = X-99, so index 1 lands
-  on the base. It plots only where the cel is non-zero and always in colour 0,
-  so this is a mask burnt into the picture rather than an image copied over it. }
 procedure LoadAsphyx;
 var
   F    : File;
@@ -342,16 +213,6 @@ begin
 end;
 
 
-{ [re] 1000:0cb1, 700 bytes. Renders EVERY glyph into video memory once and
-  then frees the font -- 0f5b pushes the pointer and 0x3b00 to 11a6:0254,
-  whose frame reads a size at bp+6 and a far pointer at bp+8, the Dispose
-  helper matching the New at 023f. Each source row is drawn three screen rows
-  tall, and the character set is split: 32..79 at y = Row*3, then X resets and
-  80..90 go at y = Row*3+50. Six PutPixel sites, byte-identical to each other
-  in their last four instructions, are those two groups of three.
-  [bp-8] is set to 255 at the top and never read again -- the third
-  declared-and-unused local in this program, after Drawit's F and RotPal2's
-  loop2. }
 procedure ShowFont;
 var
   Row   : Byte;
@@ -395,22 +256,6 @@ begin
 end;
 
 
-{ [re] 1000:0f6d, 175 bytes. The scroller, and it is hardware-accelerated:
-  Graphics Controller register 5 is set to write mode 1 for the duration, which
-  copies through the VGA latches so one byte moved shifts four pixels. Source
-  and destination are BOTH in video memory -- ShowFont drew every glyph there
-  and then freed the font, so this copies VRAM to VRAM.
-
-  Frame is 6 bytes and only [bp-2] is used, so two words are declared and never
-  touched. The other three variables it names are the program's.
-
-  1000:0f82 is `mov dx,3`, overwritten by the very next instruction before it
-  can be read. It is dead and it is transcribed anyway -- the wiki's
-  the-original-does-nothing: a reconstruction never invents such a line, so
-  leaving it out shifts every byte after it.
-
-  EQUIVALENT PASCAL, reference only: there is none worth writing. The routine
-  is latch-mode block copy and port programming from end to end. }
 procedure Scroll;
 var
   Dest  : Word;
@@ -421,7 +266,7 @@ begin
     mov dx, $03CE               { Graphics Controller index port }
     mov ax, $4105               { register 5 := $41 -- WRITE MODE 1, the latch copy }
     out dx, ax                  { index and data in one 16-bit out }
-    mov dx, 3                   { DEAD -- DX is overwritten below before any use }
+    mov dx, 3                   { DX is overwritten below before any use }
     mov dx, $03C4               { Sequencer index port }
     mov ax, $0F02               { Map Mask := all four planes }
     out dx, ax                  { so one write reaches every plane }
@@ -471,7 +316,7 @@ begin
     jg  @Done                   { yes -- nothing to reset }
     mov ScrollDone, 1           { no -- tell the caller to fetch the next character }
     mov ScrollX, 0              { and start the next glyph from its left edge }
-    @Done:                      { }
+    @Done:
     mov dx, $03CE               { Graphics Controller again }
     mov ax, $4005               { register 5 := $40 -- back to write mode 0 }
     out dx, ax                  { so ordinary writes work again }
@@ -479,24 +324,6 @@ begin
 end;
 
 
-{ [re] 1000:101c, 133 bytes. The scrolltext loop, and the last thing the demo
-  does. It drives every routine transcribed so far: Scroll for one column of
-  the current glyph, then PlayPal, RotPal and ClampDown around a pusha/popa
-  pair, then DeltaPal to upload, then the CRTC start address. A scancode on
-  port $60 sets Fading, and the loop ends when Bright reaches zero -- so the
-  keypress does not quit, it starts the fade that quits.
-
-  $X+ IS REQUIRED. ReadKey is a FUNCTION and its result is discarded, which
-  Turbo Pascal only accepts under extended syntax. 1144:030d is int 16h with
-  ah=0 storing into Crt's pending-key byte at 0x5193, and nothing consumes the
-  value at the call site.
-
-  Frame is 2 bytes, set to zero and never read -- the fifth declared-and-unused
-  local in this program.
-
-  EQUIVALENT PASCAL, reference only: the control flow is a three-way loop with
-  two continuation targets and a pusha/popa pair around three calls, none of
-  which Pascal expresses, so it is transcribed rather than re-expressed. }
 procedure RunScroll;
 var
   Spare : Word;
@@ -509,65 +336,56 @@ begin
     push ds            { ds is about to be clobbered }
     lea di, Text       { the scrolltext buffer }
     mov ax, ds         { es := ds so the text is read through es:[di] }
-    mov es, ax         { }
+    mov es, ax
     pop ds             { ds back }
     mov cx, 420        { characters to scroll before wrapping }
     @Inner:            { advance to the next character }
-    inc di             { }
+    inc di
     @Outer:            { re-entered per frame while a glyph is still scrolling }
     mov al, es:[di]    { the character }
     mov Glyph, al      { which Scroll reads }
     push di            { Scroll is Pascal and may use any of these }
-    push es            { }
-    push cx            { }
+    push es
+    push cx
     call Scroll        { one column of the glyph into video memory }
-    pop cx             { }
-    pop es             { }
-    pop di             { }
+    pop cx
+    pop es
+    pop di
     pusha              { a 186 instruction, so this needs $G+ }
     call PlayPal       { rebuild the palette }
     call RotPal        { cycle it }
     call ClampDown     { and clip it, which fades once Fading is set }
-    popa               { }
+    popa
     call DeltaPal      { wait for retrace and upload }
     cmp ScnPos, 159    { at the end of the visible span? }
     jl  @Bump          { no -- step it }
     mov ScnPos, 0      { yes -- wrap to the start }
-    jmp @Moved         { }
-    @Bump:             { }
+    jmp @Moved
+    @Bump:
     add ScnPos, 1      { one pixel of hardware scroll }
-    @Moved:            { }
+    @Moved:
     call GotoScnPos    { tell the CRTC where to start reading }
     push ax            { the port read below clobbers AX }
     in  al, $60        { the keyboard controller's scancode port }
-    xor ah, ah         { }
+    xor ah, ah
     cmp al, 0          { anything pressed? }
     pop ax             { restore before branching }
     jle @NoKey         { no }
     mov Fading, 1      { yes -- start the fade, which ends the demo }
-    @NoKey:            { }
+    @NoKey:
     cmp Bright, 0      { has the fade reached black? }
     je  @Finished      { then stop }
     cmp ScrollDone, 0  { is this glyph finished? }
     je  @Outer         { no -- another column of the same character }
     loop @Inner        { yes -- next character, 420 of them }
     jmp @Restart       { text exhausted -- round again }
-    @Finished:         { }
+    @Finished:
     pop es             { balance the push at the top }
   end;
   ReadKey;
 end;
 
 
-{ [re] 1000:10a1, 29 bytes, frameless -- an assembler procedure with no
-  parameters gets no frame and no stack check.
-
-  EQUIVALENT PASCAL, reference only:
-    Crtc[$18] := 100;
-    Crtc[$07] := Crtc[$07] and $EF;
-    Crtc[$09] := Crtc[$09] and $BF;
-  The original steps the index and data ports with inc/dec rather than
-  reloading DX, so it is transcribed. }
 procedure SplitScreen; assembler;
 asm
   mov dx, $03D4  { CRTC index port }
@@ -578,41 +396,31 @@ asm
   out dx, al     { write it }
   dec dx         { back to the index }
   mov al, 7      { index 7, Overflow -- holds line compare bit 8 }
-  out dx, al     { }
-  inc dx         { }
+  out dx, al
+  inc dx
   in  al, dx     { read it }
   and al, $EF    { clear bit 4, so bit 8 of the compare is 0 }
-  out dx, al     { }
-  dec dx         { }
+  out dx, al
+  dec dx
   mov al, 9      { index 9, Max Scan Line -- holds line compare bit 9 }
-  out dx, al     { }
-  inc dx         { }
-  in  al, dx     { }
+  out dx, al
+  inc dx
+  in  al, dx
   and al, $BF    { clear bit 6, so bit 9 is 0 as well }
   out dx, al     { the compare is therefore exactly 100 }
 end;
 
-{ [re] 1000:10be, 6 bytes, frameless.
-
-  EQUIVALENT PASCAL, reference only: TextMode(CO80). That emits a Crt call
-  and a good deal more; the original is the BIOS call and nothing else. }
 procedure TextMode3; assembler;
 asm
   mov ax, $0003  { BIOS mode 3 }
   int $10        { 80x25 colour text, which is where DOS was }
 end;
 
-{ [re] 1000:10c4, 27 bytes. Fills the whole palette buffer with 63 -- every
-  channel at full -- so the screen is white before FadeOut walks it down. }
 procedure WhiteOut;
 begin
   FillChar(T,768,63);
 end;
 
-{ [re] 1000:10df, 181 bytes. Sixty-four passes clipping every channel of all
-  256 colours to a ceiling that drops by one each time, uploading after each
-  pass. The same shape as ClampDown but unconditional and self-driving, and
-  the reason the demo opens by fading up from white. }
 procedure FadeOut;
 var
   Level : Byte;
@@ -630,12 +438,6 @@ begin
   end;
 end;
 
-{ [re] 1000:1194, 10 bytes, frameless -- three near calls and a ret, which is
-  an assembler procedure. Not an exit routine: RunScroll is the demo's last
-  scene, and TextMode3 after it is the cleanup.
-
-  EQUIVALENT PASCAL, reference only: the three calls as statements. Written
-  that way it would carry a frame and a stack check the original has not got. }
 procedure Finish; assembler;
 asm
   call GotoScnPos  { point the CRTC at the start of the scroll area }
@@ -645,7 +447,6 @@ end;
 
 
 begin
-  { [re] 1000:11ad, the original main block. }
   LoadFont;
   ScnPos := 0;
   Width := 0;
