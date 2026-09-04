@@ -39,18 +39,27 @@ var
   Tbl : array[1..67] of TEntry;
 
 { [re] 113c:0000. Called by the initialisation section below, which is why it
-  is emitted first. Frames 6 bytes: a Word counter and a far pointer. }
-procedure ClearTable;
+  is emitted first. Frames 6 bytes: a Word counter and a far pointer.
+  FAR: it ends in retf, and the init at 113c:0076 pushes CS before the
+  near call, which is how Borland reaches a far routine in its own
+  segment. Declared near it ended in ret and diverged at +$44. }
+procedure ClearTable; far;
 var
   Loop : Word;
-  P    : ^TEntry;
 begin
+  { [re] A WITH, not a pointer variable. The original computes the record's
+    address once into DI, adds the fold constant, and stores DI:DS as a far
+    pointer in a 4-byte local -- then reaches every field through
+    `les di,[bp-6]`. That is exactly what Turbo Pascal emits for `with`, and
+    the 6-byte frame is the 2-byte counter plus that hidden pointer. Writing
+    it as an explicit `P := @Tbl[Loop]` produced `lea ax,[di+0]` and a detour
+    through DX instead, and diverged at +$20. }
   for Loop := 1 to 67 do
-  begin
-    P := @Tbl[Loop];
-    P^.Head := $FFFF;
-    P^.Flag := 0;
-  end;
+    with Tbl[Loop] do
+    begin
+      Head := $FFFF;
+      Flag := 0;
+    end;
 end;
 
 { EQUIVALENT PASCAL, reference only:
@@ -74,8 +83,10 @@ begin
 end;
 
 begin
-  { [re] 113c:0067, the initialisation section. It calls a System routine at
-    11a6:0815 before ClearTable; that call is not yet identified, so nothing
-    stands in for it here and the segment will be short by its length. }
+  { [re] 113c:0067, the initialisation section. The System routine it calls
+    first is RANDOMIZE: 11a6:0815 is b4 2c cd 21, which is DOS Get System
+    Time, storing CX and DX into DGROUP 0x316 -- that four-byte value is
+    RandSeed. Nothing else in the image calls it. }
+  Randomize;
   ClearTable;
 end.
