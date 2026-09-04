@@ -223,6 +223,59 @@ begin
 end;
 
 
+{ [re] 1000:0cb1, 700 bytes. Renders EVERY glyph into video memory once and
+  then frees the font -- 0f5b pushes the pointer and 0x3b00 to 11a6:0254,
+  whose frame reads a size at bp+6 and a far pointer at bp+8, the Dispose
+  helper matching the New at 023f. Each source row is drawn three screen rows
+  tall, and the character set is split: 32..79 at y = Row*3, then X resets and
+  80..90 go at y = Row*3+50. Six PutPixel sites, byte-identical to each other
+  in their last four instructions, are those two groups of three.
+  [bp-8] is set to 255 at the top and never read again -- the third
+  declared-and-unused local in this program, after Drawit's F and RotPal2's
+  loop2. }
+procedure ShowFont;
+var
+  Row   : Byte;
+  Ch    : Byte;
+  X     : Integer;
+  Col   : Integer;
+  Spare : Integer;
+  C     : Integer;
+begin
+  X := 320;
+  Spare := 255;
+  C := 0;
+  for Ch := 32 to 79 do
+  begin
+    for Row := 1 to 16 do
+      for Col := 0 to 15 do
+      begin
+        C := 0;
+        if Font^[Ch,Row,Col+1] > 0 then C := 128;
+        PutPixel(X+Col,Row*3,Font^[Ch,Row,Col+1]+C);
+        PutPixel(X+Col,Row*3+1,Font^[Ch,Row,Col+1]+C);
+        PutPixel(X+Col,Row*3+2,Font^[Ch,Row,Col+1]+C);
+      end;
+    Inc(X,20);
+  end;
+  X := 320;
+  for Ch := 80 to 90 do
+  begin
+    for Row := 1 to 16 do
+      for Col := 0 to 15 do
+      begin
+        C := 0;
+        if Font^[Ch,Row,Col+1] > 0 then C := 128;
+        PutPixel(X+Col,Row*3+50,Font^[Ch,Row,Col+1]+C);
+        PutPixel(X+Col,Row*3+51,Font^[Ch,Row,Col+1]+C);
+        PutPixel(X+Col,Row*3+52,Font^[Ch,Row,Col+1]+C);
+      end;
+    Inc(X,20);
+  end;
+  Dispose(Font);
+end;
+
+
 begin
   { [re] NOT the original main block, which is 1000:11ad and calls twenty-odd
     routines. This exists so the smart linker keeps what has been transcribed:
@@ -234,4 +287,5 @@ begin
   LoadFont;
   LoadCheck2;
   LoadAsphyx;
+  ShowFont;
 end.

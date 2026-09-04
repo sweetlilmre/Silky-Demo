@@ -116,3 +116,8 @@ to   = 0x0bf4
 name = "LoadAsphyx"
 from = 0x0bf4
 to   = 0x0cb1
+
+[[block]]
+name = "ShowFont"
+from = 0x0cb1
+to   = 0x0f6d
