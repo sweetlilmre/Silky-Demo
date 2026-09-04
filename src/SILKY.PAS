@@ -172,6 +172,57 @@ begin
 end;
 
 
+{ [re] 1000:0b30, 196 bytes. Frame 0x4e4 = 1252, which decomposes exactly:
+  File 128 at bp-0x80, then 800, then 320, then two words. The 800 is a CEL
+  header plus its 768-byte palette, and 20000 - 800 is 19200 = 320 * 60, which
+  is the 60 rows the outer loop counts. Line is ZERO-based: the fetch is
+  [bp+di-0x4e0] with di starting at 0, and a 1-based array would fold to
+  -0x4e1. Drawn 90 rows down. }
+procedure LoadCheck2;
+var
+  F    : File;
+  Hdr  : array[1..800] of Byte;
+  Line : array[0..319] of Byte;
+  Y, X : Integer;
+begin
+  Assign(F,'Check2.Cel');
+  Reset(F,1);
+  BlockRead(F,Hdr,800);
+  for Y := 0 to 59 do
+  begin
+    BlockRead(F,Line,320);
+    for X := 0 to 319 do
+      PutPixel(X,Y+90,Line[X]);
+  end;
+  Close(F);
+end;
+
+{ [re] 1000:0bf4, 189 bytes. Frame 0x408 = 1032: File 128, the same 800-byte
+  header, then only 100 and two words. 8800 - 800 is 8000 = 100 * 80, and the
+  outer loop runs 5 to 84, which is those 80 rows. Line is ONE-based here,
+  unlike Check2's: the fetch is [bp+di-0x405] with di = X-99, so index 1 lands
+  on the base. It plots only where the cel is non-zero and always in colour 0,
+  so this is a mask burnt into the picture rather than an image copied over it. }
+procedure LoadAsphyx;
+var
+  F    : File;
+  Hdr  : array[1..800] of Byte;
+  Line : array[1..100] of Byte;
+  Y, X : Integer;
+begin
+  Assign(F,'Asphyx.Cel');
+  Reset(F,1);
+  BlockRead(F,Hdr,800);
+  for Y := 5 to 84 do
+  begin
+    BlockRead(F,Line,100);
+    for X := 100 to 199 do
+      if Line[X-99] <> 0 then PutPixel(X,Y,0);
+  end;
+  Close(F);
+end;
+
+
 begin
   { [re] NOT the original main block, which is 1000:11ad and calls twenty-odd
     routines. This exists so the smart linker keeps what has been transcribed:
@@ -181,4 +232,6 @@ begin
   StartPal;
   ClampDown;
   LoadFont;
+  LoadCheck2;
+  LoadAsphyx;
 end.

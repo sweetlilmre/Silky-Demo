@@ -1,0 +1,118 @@
+# The program segment, block by block, for blockcmp.py. The program compiles
+# into the .EXE and emits no .TPU, so units.py cannot see it and this is what
+# measures it instead.
+#
+# EVERY BOUNDARY IS A SYMBOL OUR OWN BUILD EMITTED, read from build/SILKY.MAP's
+# Publics by Value, except the four string literals -- Turbo Pascal puts a
+# literal immediately before the routine that uses it, so those are the gaps
+# between one routine's end and the next one's start.
+
+segment = 0x1000
+length  = 4848
+unit    = "SILKY.EXE"
+strip_header = true
+at      = 0x0000
+rule    = "linked"
+
+# FORGIVE DGROUP, BECAUSE OURS IS GENUINELY ELSEWHERE. This reconstruction
+# declares a fraction of the original's variables, so every DGROUP reference
+# differs by placement rather than by error. SETUP.md says to forgive nothing
+# until something needs forgiving; this needs it, and it stops needing it when
+# the data group converges. No segment_delta: nothing excuses a segment.
+varbase = 0x0000
+
+
+[[block]]
+name = "WaitRetrace"
+from = 0x0000
+to   = 0x000e
+
+[[block]]
+name = "GotoScnPos"
+from = 0x000e
+to   = 0x002b
+
+[[block]]
+name = "DeltaPal"
+from = 0x002b
+to   = 0x0047
+
+[[block]]
+name = "scroll.col literal"
+from = 0x0047
+to   = 0x0052
+
+[[block]]
+name = "Drawit"
+from = 0x0052
+to   = 0x015d
+
+[[block]]
+name = "RotPal2"
+from = 0x015d
+to   = 0x01ff
+
+[[block]]
+name = "RotPal3"
+from = 0x01ff
+to   = 0x02a1
+
+[[block]]
+name = "RotPal0"
+from = 0x02a1
+to   = 0x0449
+
+[[block]]
+name = "RotPal1"
+from = 0x0449
+to   = 0x05f1
+
+[[block]]
+name = "rotpal"
+from = 0x05f1
+to   = 0x064b
+
+[[block]]
+name = "PlayPal"
+from = 0x064b
+to   = 0x095e
+
+[[block]]
+name = "StartPal"
+from = 0x095e
+to   = 0x09fb
+
+[[block]]
+name = "ClampDown"
+from = 0x09fb
+to   = 0x0ab1
+
+[[block]]
+name = "gold.Fnt literal"
+from = 0x0ab1
+to   = 0x0aba
+
+[[block]]
+name = "LoadFont"
+from = 0x0aba
+to   = 0x0b25
+
+[[block]]
+name = "Check2.Cel literal"
+from = 0x0b25
+to   = 0x0b30
+
+[[block]]
+name = "LoadCheck2"
+from = 0x0b30
+to   = 0x0be9
+
+[[block]]
+name = "Asphyx.Cel literal"
+from = 0x0be9
+to   = 0x0bf4
+
+[[block]]
+name = "LoadAsphyx"
+from = 0x0bf4
+to   = 0x0cb1

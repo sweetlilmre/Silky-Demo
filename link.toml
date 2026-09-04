@@ -4,24 +4,27 @@
 # row -- SETUP.md is explicit that a single-target project is not a special
 # case with its own keys.
 #
-# WHERE THESE ADDRESSES CAME FROM, and it is not a linker map: src/ is empty,
-# so nothing has been built and there is no map to read. They are the paragraphs
-# named by the MZ relocation table -- 136 fixups naming five distinct targets,
-# 112f 113c 1144 11a6 1247, plus 1000 as the load base -- and the same six
-# Ghidra derives its CODE_n blocks from, which is why the two agree here. That
-# agreement is NOT independent confirmation: it is one measurement read twice.
+# WHERE THESE ADDRESSES CAME FROM. Originally the MZ relocation table -- 136
+# fixups naming five distinct targets, 112f 113c 1144 11a6 1247, plus 1000 as
+# the load base -- and the same six Ghidra derives its CODE_n blocks from,
+# which is why those two agree: one measurement read twice, not two agreeing.
+#
+# THERE IS NOW A LINKER MAP as well, build/SILKY.MAP, and it confirms them
+# independently: its segment table lists the same five, and its Publics by
+# Value puts our routines at the ORIGINAL's offsets -- WAITRETRACE 0000,
+# GOTOSCNPOS 000E, DELTAPAL 002B, DRAWIT 0052, ROTPAL2 015D, ROTPAL3 01FF,
+# ROTPAL0 02A1. Crt is absent from it because nothing references Crt yet.
 #
 # The arithmetic does close twice over, and that part is independent. Every
 # segment's extent is the next one's base, the chain ends at paragraph 1279,
 # and (1279 - 1000) * 16 = 10128 bytes -- which is the load image size computed
 # from the MZ header's own page count, by a different route.
 #
-# THE BLIND SPOT IS A UNIT NO FIXUP NAMES. A segment base only appears above if
-# something refers to it across a segment boundary, so a unit that is never
-# entered from outside its own segment is invisible to this method and would sit
-# inside its neighbour's extent, silently. A linker map is what will settle it,
-# and until there is one, a "segment" here is a paragraph something far-refers
-# to and nothing stronger.
+# THE BLIND SPOT WAS A UNIT NO FIXUP NAMES -- a base only appears above if
+# something refers to it across a segment boundary, so a unit never entered
+# from outside its own segment would sit inside its neighbour's extent in
+# silence. The map closes that for everything built so far and will keep
+# closing it as more is transcribed.
 
 layout = "docs/00-map.md"    # the segment/size document coverage measures
                              # against; segdoc.py generates one
@@ -75,9 +78,8 @@ noseg = []
 # decision about a map that does not exist.
 
 [part."000"]
-# THE MAP DOES NOT EXIST YET and this names where it will be. src/ holds no
-# SILKY.PAS, so nothing has produced a SILKY.MAP. Any instrument reading this
-# key fails until there is a program to build -- a to-do, not a silence.
+# THE MAP EXISTS. src/SILKY.PAS builds and /GD makes TPC emit it, so mapcmp
+# reads this key rather than failing on it.
 exe        = "SILKY.EXE"
 map        = "build/SILKY.MAP"
 main_unit  = "SILKY"         # THIS RECONSTRUCTION'S choice of name. The
@@ -85,6 +87,11 @@ main_unit  = "SILKY"         # THIS RECONSTRUCTION'S choice of name. The
                              # the image; the linker map will say what we
                              # called it, which is not the same thing as what
                              # they called it.
+# The program emits no .TPU, so units.py cannot see it; blockcmp measures it
+# block by block instead, and this names the config. Written after two
+# scratchpad scripts had already been built to do the same job by hand --
+# SETUP.md's step 5 says plainly that this is what measures a program segment.
+program_blocks = "blocks/1000.toml"
 program_seg = 0x1000         # NAMED, never taken as segments[0]: position
                              # means "the program" only by coincidence of
                              # link order. Here it is evidenced -- the MZ
