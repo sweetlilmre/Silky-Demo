@@ -53,7 +53,10 @@ list = [
 
 [stage]
 encoding = "cp437"
-alongside = []
+# BARS.INC is not a compilation target -- it is {$I}-included by SILKY.PAS --
+# so it never appears in [order].list and would not be staged without this.
+# The compiler answered `Error 15: File not found (BARS.INC)` until it was.
+alongside = ["src/BARS.INC"]
 
 [names]
 

@@ -75,3 +75,8 @@ state = "open"
 name = "transcribe-the-rest-of-barsinc"
 finding = "Four BARS.INC routines are still untranscribed: Drawit at 0052, PlayPal at 064b, StartPal at 095e, and whatever fills the gap. Drawit and PlayPal are the two that will not compile as-is -- Drawit is missing the binarys scroll.col loading, and PlayPal references Value, Value2, Value3, Count, Count2, Count3 and PalCol which are declared outside the include. Bringing them in needs those globals declared and Drawits file section reconstructed from 1000:0052, where the literal scroll.col sits at 0047 and the System file group 04a9/0822/0850/093b is called. Doing so would carry the reconstruction from 002b to 09fb in one contiguous run, which is about half the program segment."
 state = "open"
+
+[[plan.investigation]]
+name = "asm-lines-need-comments"
+finding = "asmaudit reports 0 units meet the rule and 2 do not. WORKING.md section 6 requires hand-written assembler to be transcribed verbatim with a comment on EVERY line. The assembler I have written -- WaitRetrace and GotoScnPos in SILKY.PAS, SetModeX and SetPlanes asm block in MODEX.PAS, and the DeltaPal edit in BARS.INC -- carries block comments explaining what each routine does but not per-line commentary. The tool exits 0 so it is not gating, which is exactly why it went unnoticed for three commits. Roughly seventy lines need comments. Note BARS.INC is ORIGINAL source and its own assembler is the authors, not ours; only the lines this reconstruction wrote are covered by the rule."
+state = "open"
