@@ -1,3 +1,10 @@
+{$X+}
+{ [re] EXTENDED SYNTAX, and it is required rather than stylistic. RunScroll
+  calls Crt's ReadKey as a statement and throws the result away, which Turbo
+  Pascal refuses without it -- 1144:030d is a FUNCTION, int 16h with ah=0
+  returning the key in AL, and nothing at the call site consumes it. $X is a
+  global directive and will not compile part-way down a file. }
+
 program Silky;
 
 { The 1993 Asphyxia demo, written for Silky's eighteenth birthday.
@@ -8,7 +15,7 @@ program Silky;
   from DeltaPal at 002b through StartPal at 095e -- the include's declaration
   order IS the segment order, which is one of the reasons to believe it. }
 
-uses ModeX, Palette;
+uses ModeX, Palette, Crt;
 
 type
   { [re] Named by BARS.INC, which declares Tmp : Array[1..16] of RGBt. }
@@ -53,6 +60,9 @@ var
   { [re] The scroller's state. 0x62e is set to 1 when a glyph runs out, 0x62f
     is the character being scrolled in, 0x630 its width and 0x632 how far into
     it the scroll has reached. Names are ours. }
+  { [re] DGROUP 0x634. Main fills it in six blocks of 80 from the initialised
+    text at 0xee onwards. The loop reads 420 characters before wrapping. }
+  Text       : array[1..480] of Char;
   ScrollDone : Byte;
   Glyph      : Byte;
   Width      : Word;
@@ -368,6 +378,86 @@ begin
 end;
 
 
+{ [re] 1000:101c, 133 bytes. The scrolltext loop, and the last thing the demo
+  does. It drives every routine transcribed so far: Scroll for one column of
+  the current glyph, then PlayPal, RotPal and ClampDown around a pusha/popa
+  pair, then DeltaPal to upload, then the CRTC start address. A scancode on
+  port $60 sets Fading, and the loop ends when Bright reaches zero -- so the
+  keypress does not quit, it starts the fade that quits.
+
+  $X+ IS REQUIRED. ReadKey is a FUNCTION and its result is discarded, which
+  Turbo Pascal only accepts under extended syntax. 1144:030d is int 16h with
+  ah=0 storing into Crt's pending-key byte at 0x5193, and nothing consumes the
+  value at the call site.
+
+  Frame is 2 bytes, set to zero and never read -- the fifth declared-and-unused
+  local in this program.
+
+  EQUIVALENT PASCAL, reference only: the control flow is a three-way loop with
+  two continuation targets and a pusha/popa pair around three calls, none of
+  which Pascal expresses, so it is transcribed rather than re-expressed. }
+procedure RunScroll;
+var
+  Spare : Word;
+begin
+  asm
+    mov Spare, 0       { set and never read -- the fifth such local here }
+    mov ScrollDone, 1  { force the first pass to fetch a character }
+    push es            { balanced by the pop at @Finished }
+    @Restart:          { the whole text has been consumed -- start again }
+    push ds            { ds is about to be clobbered }
+    lea di, Text       { the scrolltext buffer }
+    mov ax, ds         { es := ds so the text is read through es:[di] }
+    mov es, ax         { }
+    pop ds             { ds back }
+    mov cx, 420        { characters to scroll before wrapping }
+    @Inner:            { advance to the next character }
+    inc di             { }
+    @Outer:            { re-entered per frame while a glyph is still scrolling }
+    mov al, es:[di]    { the character }
+    mov Glyph, al      { which Scroll reads }
+    push di            { Scroll is Pascal and may use any of these }
+    push es            { }
+    push cx            { }
+    call Scroll        { one column of the glyph into video memory }
+    pop cx             { }
+    pop es             { }
+    pop di             { }
+    pusha              { a 186 instruction, so this needs $G+ }
+    call PlayPal       { rebuild the palette }
+    call RotPal        { cycle it }
+    call ClampDown     { and clip it, which fades once Fading is set }
+    popa               { }
+    call DeltaPal      { wait for retrace and upload }
+    cmp ScnPos, 159    { at the end of the visible span? }
+    jl  @Bump          { no -- step it }
+    mov ScnPos, 0      { yes -- wrap to the start }
+    jmp @Moved         { }
+    @Bump:             { }
+    add ScnPos, 1      { one pixel of hardware scroll }
+    @Moved:            { }
+    call GotoScnPos    { tell the CRTC where to start reading }
+    push ax            { the port read below clobbers AX }
+    in  al, $60        { the keyboard controller's scancode port }
+    xor ah, ah         { }
+    cmp al, 0          { anything pressed? }
+    pop ax             { restore before branching }
+    jle @NoKey         { no }
+    mov Fading, 1      { yes -- start the fade, which ends the demo }
+    @NoKey:            { }
+    cmp Bright, 0      { has the fade reached black? }
+    je  @Finished      { then stop }
+    cmp ScrollDone, 0  { is this glyph finished? }
+    je  @Outer         { no -- another column of the same character }
+    loop @Inner        { yes -- next character, 420 of them }
+    jmp @Restart       { text exhausted -- round again }
+    @Finished:         { }
+    pop es             { balance the push at the top }
+  end;
+  ReadKey;
+end;
+
+
 begin
   { [re] NOT the original main block, which is 1000:11ad and calls twenty-odd
     routines. This exists so the smart linker keeps what has been transcribed:
@@ -381,4 +471,5 @@ begin
   LoadAsphyx;
   ShowFont;
   Scroll;
+  RunScroll;
 end.
