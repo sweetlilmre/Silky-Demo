@@ -1,0 +1,12 @@
+# One row per compiled unit and the segment it must rebuild. Read by units.py,
+# and by coverage.py, which shells out to it.
+
+sources  = "src"
+rewrites = []
+
+[unit.MODEX]
+segment = 0x112F
+# The ORIGINAL's CODE length, which is the segment's 208-byte extent less the
+# linker's zero padding. The last instruction is `retf 2` at 112f:00c7..00c9,
+# and 112f:00ca..00cf are six zero bytes.
+length  = 202
