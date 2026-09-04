@@ -120,19 +120,34 @@ segments = [
                                             # framed far return in 4848 bytes,
                                             # which is right: a program body
                                             # ends in the runtime's halt.
-  { segment = 0x112f, name = "UNIT112F" },  # 208 bytes. UNIDENTIFIED, and the
-                                            # name is a placeholder that says
-                                            # so. Called from the program at
-                                            # nine sites through 112f:0000,
-                                            # once through 112f:0043; calls out
-                                            # only to System.
-  { segment = 0x113c, name = "UNIT113C" },  # 128 bytes. UNIDENTIFIED. Entered
-                                            # at 113c:0045 and 113c:0067, and
-                                            # it holds the load image's only
-                                            # virtual call site, a
-                                            # CALLF [DI+cb] at 113c:0079 --
-                                            # so something here is an object
-                                            # with a VMT.
+  { segment = 0x112f, name = "MODEX" },     # 208 bytes, and the whole unit is
+                                            # read. 0043 sets mode 13h then
+                                            # UNCHAINS it -- Sequencer 04 with
+                                            # bit 3 cleared turns chain-4 off,
+                                            # GC 05 and GC 06 drop odd/even,
+                                            # CRTC 14 and 17 give byte mode,
+                                            # CRTC 13 takes the line width from
+                                            # DGROUP 0x816. 00a0 is SetPlane,
+                                            # 1 shl plane out to the Map Mask.
+                                            # 0000 is PutPixel: x mod 4 picks
+                                            # the plane, x div 4 the column.
+                                            # README.1ST says this demo was
+                                            # their first use of chain-4, and
+                                            # this is that code. The NAME is
+                                            # this reconstruction's.
+  { segment = 0x113c, name = "PALETTE" },   # 128 bytes, and the whole unit is
+                                            # read. 0045 is SetPalette: the
+                                            # colour index out to 0x3c8 then
+                                            # three components to 0x3c9, retf 8
+                                            # for four byte parameters. 0067 is
+                                            # the unit init and calls 0000,
+                                            # which fills 67 records of 0x101
+                                            # bytes from DGROUP 0x717, setting
+                                            # each record's first word to
+                                            # 0xffff and its byte at +0xfc to
+                                            # zero. What that table IS remains
+                                            # unread. The NAME is this
+                                            # reconstruction's.
   { segment = 0x1144, name = "Crt" },       # 1568 bytes. The RTL's, see
                                             # [lists].rtl for the measurement.
   { segment = 0x11a6, name = "System" },    # 2576 bytes. The runtime; see

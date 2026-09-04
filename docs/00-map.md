@@ -22,8 +22,8 @@ What *is* independent is the arithmetic. Each segment's extent is the next one's
 | seg | bytes | what |
 |---|---:|---|
 | `1000` | 4848 | **the program.** Names the four data files the demo loads — `scroll.col`, `gold.Fnt`, `Check2.Cel`, `Asphyx.Cel` — and all four are in `bin/`. The MZ entry `CS:IP 0000:119e` lands at offset `0x119e` here, and that instruction calls `11a6:0000`, the runtime's init. No framed far return in 4848 bytes, which is correct: a program body ends in the runtime's halt, not a `RETF`. |
-| `112f` | 208 | **unidentified.** Called from the program at nine sites through `112f:0000` and once through `112f:0043`; calls out only to System. Two framed far returns, `RETF 6` and `RETF 2`. |
-| `113c` | 128 | **unidentified.** Entered at `113c:0045` and `113c:0067`. Holds the load image's only virtual call site — a `CALLF [DI+cb]` at `113c:0079` — so something here is an object with a VMT. |
+| `112f` | 208 | **the Mode X unit.** `PutPixel` at `0000`, the unchained mode-13h setup at `0043`, `SetPlane` at `00a0`. Fully read — see [02-units.md](02-units.md). Name is ours. |
+| `113c` | 128 | **the palette unit.** `SetPalette` at `0045` writing ports `3c8`/`3c9`; init at `0067` fills a table at DGROUP `0x717`. Fully read — see [02-units.md](02-units.md). Name is ours. |
 | `1144` | 1568 | **Crt**, the RTL's. Not ours to transcribe. Named from six of its own routines — see [01-crt.md](01-crt.md). |
 | `11a6` | 2576 | **System**, the runtime. Carries `Runtime error ` and the Borland banner, and `survey.py` finds it calling out to *nothing at all*: everything depends on it and it depends on nobody. |
 | `1247` | 800 | **the data group** — linked last, so it is the image's tail. Not code: 800 bytes with zero far returns and one printable string, which is the demo's entire scroll text. |
