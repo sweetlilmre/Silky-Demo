@@ -1,3 +1,9 @@
+{ THE AUTHORS' OWN FILE, as it shipped with the demo -- the palette animation
+  and the colour bars. It is not ours, and it is not quite what shipped
+  either: in three places the executable does something the shipped include
+  does not say, and this copy follows the executable. Each of the three is
+  marked where it happens. }
+
 Procedure DeltaPal; assembler;
 asm
    push ds
@@ -12,7 +18,11 @@ asm
    mov al,0
    out dx,al
    inc dx
-{ [re] The shipped include writes `rep outsb` here. The binary does NOT:
+{ DIFFERENT FROM THE SHIPPED INCLUDE, first of three. It writes the whole
+  palette out with one repeated instruction; the executable steps a byte at a
+  time instead, and this follows the executable.
+
+  [re] The shipped include writes `rep outsb` here. The binary does NOT:
   1000:003f is lodsb / out dx,al / loop. Two bytes against four, so the
   include's DeltaPal is 2 bytes short and every routine after it shifts
   by two. Transcribed from the binary, which is the measurement target. }
@@ -33,7 +43,11 @@ Var
    F : File;
 
 Begin
-{ [re] THE FILE SECTION IS MISSING FROM THE SHIPPED INCLUDE. It declares F and
+{ DIFFERENT FROM THE SHIPPED INCLUDE, second of three: it declares the file
+  and then never opens it. These four lines read the palette off disk and the
+  executable does them, so they are here.
+
+  [re] The file section is missing from the shipped include. It declares F and
   never uses it, and left a gap here. Reconstructed from 1000:0052, which does
   Assign at 11a6:0822, Reset at 0850, BlockRead at 093b and Close at 08d1, each
   followed by the 04a9 that $I+ emits. The literal sits at 1000:0047, the
@@ -44,7 +58,11 @@ Begin
    BlockRead(F,T,1);
    Close(F);
 
-{ [re] Also absent from the shipped include. 1000:00af..0104, counting to
+{ DIFFERENT FROM THE SHIPPED INCLUDE, third of three. This loop blacks out
+  the eighty-nine colours the bars use, on screen and in the buffer both,
+  before anything is drawn in them.
+
+  [re] Also absent from the shipped include. 1000:00af..0104, counting to
   0x59, zeroing T[150+Loop] a channel at a time and then calling 113c:0045. }
    For Loop := 1 to 89 do
    Begin

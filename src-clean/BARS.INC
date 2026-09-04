@@ -1,3 +1,9 @@
+{ THE AUTHORS' OWN FILE, as it shipped with the demo -- the palette animation
+  and the colour bars. It is not ours, and it is not quite what shipped
+  either: in three places the executable does something the shipped include
+  does not say, and this copy follows the executable. Each of the three is
+  marked where it happens. }
+
 Procedure DeltaPal; assembler;
 asm
    push ds
@@ -12,6 +18,9 @@ asm
    mov al,0
    out dx,al
    inc dx
+{ DIFFERENT FROM THE SHIPPED INCLUDE, first of three. It writes the whole
+  palette out with one repeated instruction; the executable steps a byte at a
+  time instead, and this follows the executable. }
 @NextByte:
    lodsb
    out dx,al
@@ -29,11 +38,17 @@ Var
    F : File;
 
 Begin
+{ DIFFERENT FROM THE SHIPPED INCLUDE, second of three: it declares the file
+  and then never opens it. These four lines read the palette off disk and the
+  executable does them, so they are here. }
    Assign(F,'scroll.col');
    Reset(F,768);
    BlockRead(F,T,1);
    Close(F);
 
+{ DIFFERENT FROM THE SHIPPED INCLUDE, third of three. This loop blacks out
+  the eighty-nine colours the bars use, on screen and in the buffer both,
+  before anything is drawn in them. }
    For Loop := 1 to 89 do
    Begin
       T[150+Loop].r := 0;
