@@ -6,7 +6,7 @@ The compiler is **Turbo Pascal 6.0**, named by the runtime's own banner at `11a6
 
 ## Where the segment boundaries came from
 
-Not from a linker map. `src/` is empty, so nothing has been built and there is no map to read. The boundaries are the paragraphs named by the MZ relocation table — 136 fixups naming five distinct targets, `112f` `113c` `1144` `11a6` `1247`, plus `1000` as the load base. Ghidra derives its `CODE_n` blocks from the same fixups, so the two agreeing is one measurement read twice rather than two measurements agreeing.
+Not from a linker map. This was written before there was a reconstruction to build, so there was no map to read; there is one now in `build/SILKY.MAP`, and it agrees, which is a later and stronger measurement than the one this section describes. The boundaries are the paragraphs named by the MZ relocation table — 136 fixups naming five distinct targets, `112f` `113c` `1144` `11a6` `1247`, plus `1000` as the load base. Ghidra derives its `CODE_n` blocks from the same fixups, so the two agreeing is one measurement read twice rather than two measurements agreeing.
 
 What *is* independent is the arithmetic. Each segment's extent is the next one's base, the chain closes at paragraph `1279`, and `(0x1279 - 0x1000) * 16 = 10128` — the load image size computed from the MZ header's page count by a different route. Two routes, one answer.
 
@@ -39,3 +39,5 @@ That is the scrolltext, and it is data. The segment walk therefore ends at `1247
 ## Not part of the reconstruction
 
 `bin/BARS.INC` is **original Turbo Pascal source** that shipped with the demo — 4,691 bytes of `{$I}` include, CRLF, pure ASCII, holding `Procedure DeltaPal; assembler;` with real inline assembler and a `Drawit` that calls `PutPixel`. It is a build input and evidence, not something to reconstruct.
+
+It is now `src/BARS.INC`, included by `src/SILKY.PAS`, and it is the authors' text in three places altered to follow the executable: `DeltaPal` writes the palette a byte at a time rather than with one repeated instruction, and `Drawit` gains the four lines that read `scroll.col` and the loop that blacks out the bars' colours, neither of which the shipped include contains. Each is marked in the file.
