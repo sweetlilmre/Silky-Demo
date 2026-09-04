@@ -8,6 +8,21 @@
   returning the key in AL, and nothing at the call site consumes it. $X is a
   global directive and will not compile part-way down a file. }
 
+{ WHICH NAMES ARE THE AUTHORS' AND WHICH ARE OURS, because a reader cannot
+  tell by looking and it changes what a name is worth.
+
+  RECOVERED. bin/BARS.INC shipped with the demo and declares DeltaPal, Drawit,
+  PlayPal, RotPal0 to RotPal3, rotpal and StartPal, along with the types and
+  variables RGBt, T, PalCol, GlobCount, Count/Count2/Count3 and
+  Value/Value2/Value3. It also CALLS waitretrace and gotoscnpos without
+  declaring them, so those two names are the authors' as well.
+
+  OURS. Everything else, including the unit names ModeX and Palette and every
+  routine not listed above -- ClampDown, FadeOut, Finish, LoadAsphyx,
+  LoadCheck2, LoadFont, RunScroll, Scroll, ShowFont, SplitScreen, TextMode3
+  and WhiteOut -- and every variable not listed above. They describe what the
+  code does; they are not what anybody typed in 1993. }
+
 program Silky;
 
 { The 1993 Asphyxia demo, written for Silky's eighteenth birthday.
