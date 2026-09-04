@@ -20,3 +20,13 @@ state = "open"
 name = "table-at-dgroup-0717"
 finding = "The palette unit at 113c fills 67 records of 0x101 bytes based at DGROUP 0x717, running to 0x4a5a. It writes only two fields per record: the first word gets 0xffff and the byte at +0xfc gets zero. Everything else in each 257-byte record is filled by something else, and nothing in 113c writes it. The counter runs 1 to 67 inclusive rather than from 0, so either record zero is skipped deliberately or the real base is 0x717 plus 0x101. Reading the program segment at 1000 for writers of this range is the next step; the demo loads gold.Fnt, Check2.Cel, Asphyx.Cel and scroll.col, and one of those is the likely filler."
 state = "open"
+
+[[plan.investigation]]
+name = "barsinc-differs-from-binary"
+finding = "bin/BARS.INC shipped with the demo and holds Procedure DeltaPal, whose every instruction corresponds to 1000:002b except one: the source writes rep outsb and the binary does lodsb, out dx al, loop. Equivalent in effect, different in bytes, so the include we hold is a VARIANT of the source this binary was built from and not that source. Which direction the edit went is unsettled; a rep outsb to the DAC was known to be too fast for some cards, so either is plausible. This matters beyond one routine: it sets how far BARS.INC can be trusted as ground truth for anything else it contains, and Drawit and PutPixel are also in it. The include did give up one original identifier for free -- lea si,t against lea si,[0x328] names DGROUP 0x328 as t, the 768 byte palette buffer."
+state = "open"
+
+[[plan.investigation]]
+name = "twin-routines-02a1-0449"
+finding = "Two routines of 424 bytes each at 02a1 and 0449 have the same far-call profile: System:0776 sixteen times and System:09d3 eight times in each, plus the usual stack check. Same size and same shape is a strong hint they are a pair, either two effects built from one template or one routine duplicated. Neither is identified. If they are a duplicated body, that is a shared-source-versus-shared-unit question the wiki already covers under one-routine-two-units, and getting it wrong changes the emitted code at every call site."
+state = "open"
