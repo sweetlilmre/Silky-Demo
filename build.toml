@@ -48,6 +48,7 @@ flags = "/la /m2"
 mode = "declared"
 list = [
   "MODEX.PAS",    # 112f  the Mode X unit -- PutPixel, SetModeX, SetPlane
+  "PALETTE.PAS",  # 113c  SetPalette and the table its init clears
   "SILKY.PAS",    # 1000  the program
 ]
 

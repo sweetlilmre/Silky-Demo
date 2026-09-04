@@ -8,7 +8,7 @@ program Silky;
   from DeltaPal at 002b through StartPal at 095e -- the include's declaration
   order IS the segment order, which is one of the reasons to believe it. }
 
-uses ModeX;
+uses ModeX, Palette;
 
 type
   { [re] Named by BARS.INC, which declares Tmp : Array[1..16] of RGBt. }
@@ -31,8 +31,14 @@ var
   { [re] Set by Drawit and read by PlayPal. Declared here because BARS.INC
     references them without declaring them, so they lived in the enclosing
     program. Types are a first reading and the build is what tests them. }
-  Value, Value2, Value3 : Integer;
-  Count, Count2, Count3 : Integer;
+  { [re] BYTES, not Integers -- 1000:013d..015b sets all six with
+    `mov byte ptr`. Value..Value3 are 0x324..0x326 and Count..Count3 are
+    0x31c..0x31e, which are exactly the addresses PlayPal at 064b reads:
+    the Count trio nine times each and the Value trio three times each.
+    Value..Value3 are SIGNED: PlayPal does `Value2 := -1`, and Byte refused
+    to compile it. ShortInt is one byte too, so the store is the same. }
+  Value, Value2, Value3 : ShortInt;
+  Count, Count2, Count3 : Byte;
 
 { [re] 1000:0000, 14 bytes. Called NEAR by DeltaPal -- `e8` with no `push cs`
   at 1000:002e -- so it is local, not far. BARS.INC calls it but does not

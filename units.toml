@@ -10,3 +10,9 @@ segment = 0x112F
 # linker's zero padding. The last instruction is `retf 2` at 112f:00c7..00c9,
 # and 112f:00ca..00cf are six zero bytes.
 length  = 202
+
+[unit.PALETTE]
+segment = 0x113C
+# The segment's 128-byte extent less four bytes of linker zero padding: the
+# last instruction is `retf` at 113c:007b, and 113c:007c..007f are zero.
+length  = 124

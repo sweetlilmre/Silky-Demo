@@ -33,6 +33,27 @@ Var
    F : File;
 
 Begin
+{ [re] THE FILE SECTION IS MISSING FROM THE SHIPPED INCLUDE. It declares F and
+  never uses it, and left a gap here. Reconstructed from 1000:0052, which does
+  Assign at 11a6:0822, Reset at 0850, BlockRead at 093b and Close at 08d1, each
+  followed by the 04a9 that $I+ emits. The literal sits at 1000:0047, the
+  record size pushed to Reset is 0x300, and BlockRead's destination is 0x328,
+  which is T. }
+   Assign(F,'scroll.col');
+   Reset(F,768);
+   BlockRead(F,T,1);
+   Close(F);
+
+{ [re] Also absent from the shipped include. 1000:00af..0104, counting to
+  0x59, zeroing T[150+Loop] a channel at a time and then calling 113c:0045. }
+   For Loop := 1 to 89 do
+   Begin
+      T[150+Loop].r := 0;
+      T[150+Loop].g := 0;
+      T[150+Loop].b := 0;
+      SetPalette(150+Loop,0,0,0);
+   End;
+
    For Loop2 := 1 to 89 do
       For Loop := 0 to 319 do
          PutPixel(Loop,Loop2,Loop2+150);
@@ -45,6 +66,7 @@ Begin
 
    
 End;
+
 
 Procedure RotPal2;
 Var

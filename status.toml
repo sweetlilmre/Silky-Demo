@@ -83,7 +83,8 @@ state = "open"
 [[plan.investigation]]
 name = "transcribe-the-rest-of-barsinc"
 finding = "Four BARS.INC routines are still untranscribed: Drawit at 0052, PlayPal at 064b, StartPal at 095e, and whatever fills the gap. Drawit and PlayPal are the two that will not compile as-is -- Drawit is missing the binarys scroll.col loading, and PlayPal references Value, Value2, Value3, Count, Count2, Count3 and PalCol which are declared outside the include. Bringing them in needs those globals declared and Drawits file section reconstructed from 1000:0052, where the literal scroll.col sits at 0047 and the System file group 04a9/0822/0850/093b is called. Doing so would carry the reconstruction from 002b to 09fb in one contiguous run, which is about half the program segment."
-state = "open"
+state = "resolved"
+resolution = "Done for Drawit, PlayPal and StartPal. The contiguous run 1000:0000..09fb -- eleven routines, 2544 bytes -- now measures ZERO unexplained bytes, every difference being a relocation or a DGROUP address. Drawits missing file section is reconstructed from 1000:0052: Assign at 11a6:0822, Reset with a 768-byte record at 0850, BlockRead into T at 093b, Close at 08d1, each followed by the 04a9 that I+ emits; then a loop to 0x59 zeroing T[150+Loop] and calling SetPalette. Two type corrections came out of it: Value, Value2 and Value3 are SHORTINT not Integer -- one byte, and signed because PlayPal assigns -1 -- and Count, Count2, Count3 are Byte. They live at 0x324..0x326 and 0x31c..0x31e, which are exactly the addresses PlayPal reads. THE MEASUREMENT WAS CHECKED A SECOND WAY because the classifier had just been widened, which is how a forgiveness rule comes to explain everything: it makes 72 relocation calls in that range and the MZ relocation table holds exactly 72 relocations there. The remaining 419 differing bytes are DGROUP offsets, which are not relocated and so correctly absent from that table."
 
 [[plan.investigation]]
 name = "asm-lines-need-comments"
@@ -99,4 +100,9 @@ state = "open"
 [[plan.investigation]]
 name = "routines-emit-needs-a-path"
 finding = "routines.py --emit with no path raises IndexError: list index out of range from argv.index(\"--emit\") + 1 at line 286, instead of printing usage. Small, but it is a crash where every other argument error in this kit prints a sentence. Trivial fix in the kit; recorded rather than patched because a kit change needs accepting by every consumer."
+state = "open"
+
+[[plan.investigation]]
+name = "palette-unit-at-25-percent"
+finding = "PALETTE at 113c rebuilds to 25 percent, agreeing to +0x20 of 0x7c. One finding already banked: the unit is compiled with $G- where MODEX and the program use $G+. Measured -- at 113c:0018 the original computes the record offset with mov ax,$0101 then mul, which is 8086, and with $G+ Turbo Pascal emits imul di,[bp-2],$0101 instead, a 186 instruction. Adding $G- to the unit moved the agreement from 0x18 to 0x20. The next divergence is the address arithmetic: the original does mov di,ax then add di,$0717 and stores DI and DS directly, while ours does lea ax,[di+0] then goes through DX. Part of that is DGROUP placement -- our Tbl sits at offset 0 so the fold constant is 0 -- but the instruction FORM differs too, so the pointer expression is not yet the original one. The 257-byte record shape is also still a guess: only the word at +0 and the byte at +0xfc are evidenced."
 state = "open"
