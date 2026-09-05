@@ -4,17 +4,35 @@
 
 ## Where it stands
 
-| measurement | instrument | result |
-|---|---|---|
-| **the whole file** | direct | **10,704 bytes, 0 differ** |
-| the program, segment `1000` | `blockcmp` | 4848 of 4848 bytes, 29 of 29 blocks byte-identical |
-| the two units | `mapcmp` | `MODEX` 202/202 and `PALETTE` 124/124, both exact |
-| the initialised data | `dgimage` | 800 bytes, identical |
-| the runtime, `Crt` and `System` | `mapcmp` | exact, and not ours to write |
-| whole-binary identity | `artefact` | **R7 holds**, recomputed on every run rather than believed |
-| running it | `observe` | R3, part `SILKY`, matches against the original |
+**R7: the rebuild is the original.** All 10,704 bytes -- the MZ header, the relocation table, all five segments and the data group. That is the top rung of the fidelity ladder this project measures against, and the whole of the claim:
 
-The rebuild is the original: header, relocation table, all five segments and the data group. R7 is the top of the fidelity ladder, and it is stored as data so that a later edit which breaks it fails a check instead of going unnoticed.
+    artefact.py status.toml --check
+      SILKY    file    build/SILKY.EXE == bin/SILKY.EXE    R7 holds
+
+It is stored in `status.toml` as data and **recomputed from the two files on every run**, never read back from what was written last time. So an edit that breaks it fails a check rather than passing quietly.
+
+### What the other instruments are for now
+
+Everything below R7 was the ladder being climbed, and each rung was the best available answer until the next one existed. They are all still run, and they all still pass, but their job has changed: byte-identity implies every one of them, so they can no longer be independent evidence that the source is right. What they give is **resolution** -- when a future edit breaks R7, these say where.
+
+| instrument | what it now localises | result |
+|---|---|---|
+| `blockcmp` | which of 29 blocks in the program segment moved | 4848 of 4848 bytes, 29 of 29 agree |
+| `mapcmp` | which unit changed length | 5 units exact |
+| `dgimage` | whether the initialised data shifted | 800 bytes identical |
+| `routines.py` | which locked routine regressed | 11 of 11 locked, 0 holes |
+| `ratchet` | whether any measured number went down | 0 failures, 0 rises |
+
+`Crt` and `System` are in that count and were never ours to write; they are the runtime, and they match because the same compiler emitted them.
+
+### And the rung that a tool cannot reach
+
+    observe.py status.toml --report
+      SILKY    part  matches   R3   2026-09-04 maintainer
+
+R3 means a person ran both binaries and saw no difference. It is the only rung whose instrument is somebody watching a screen, and it was the strongest thing this project had for a long stretch -- before the bytes matched, it was the only evidence that the reconstruction *behaved*.
+
+R7 has now overtaken it, and the honest thing is to say so rather than to keep quoting the observation as though it still carried the weight. Two identical files cannot look different, so a run can no longer fail. The row is kept because it is a dated record of something somebody actually saw, and it was **re-affirmed** rather than re-observed when the source changed under it -- `observe.py` refuses to fabricate a run nobody made, and re-affirmation is the instrument for "a person watched this, and the binary has not changed since".
 
 The last two bytes took the longest and are worth recording, because the delay was a mistake and not a difficulty. `ClampDown` guards its body in seven bytes where a plain `if Fading = 1 then` compiles to five:
 
